@@ -1,8 +1,8 @@
-using OrderService.Domain.Enums;
-
 namespace OrderService.Domain.Entities;
 
-public class Order
+using OrderService.Domain.Enums;
+
+public class OrderEntity
 {
     public Guid Id { get; set; } = Guid.NewGuid();
     public Guid CustomerId { get; set; }
