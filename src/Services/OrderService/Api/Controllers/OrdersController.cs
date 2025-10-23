@@ -69,10 +69,9 @@ public class OrdersController : ControllerBase
         });
     }
 
-    // ⚡ YENİ ENDPOINT: Cancel Order
     [HttpPut("{orderId:guid}/cancel")]
     public async Task<IActionResult> Cancel(
-        [FromRoute] Guid orderId, 
+        [FromRoute] Guid orderId,
         [FromBody] CancelOrderRequest? request,
         CancellationToken ct)
     {
@@ -81,8 +80,8 @@ public class OrdersController : ControllerBase
 
         if (!result)
         {
-            return BadRequest(new 
-            { 
+            return BadRequest(new
+            {
                 error = "Order cannot be cancelled",
                 message = "Order may be already cancelled, delivered, or outside the 2-hour cancellation window"
             });
@@ -90,4 +89,34 @@ public class OrdersController : ControllerBase
 
         return Ok(new { message = "Order cancelled successfully" });
     }
+    [HttpGet("customer/{customerId:guid}")]
+public async Task<IActionResult> GetByCustomerId([FromRoute] Guid customerId, CancellationToken ct)
+{
+    var orders = await _repo.GetByCustomerIdAsync(customerId, ct);
+    
+    return Ok(new
+    {
+        customerId,
+        totalOrders = orders.Count,
+        orders = orders.Select(o => new
+        {
+            o.Id,
+            o.TotalAmount,
+            Status = o.Status.ToString(),
+            o.CreatedAtUtc,
+            o.ConfirmedAtUtc,
+            o.CancelledAtUtc,
+            o.CancellationReason,
+            ItemCount = o.Items.Count,
+            Items = o.Items.Select(i => new
+            {
+                i.ProductId,
+                i.ProductName,
+                i.Quantity,
+                i.UnitPrice,
+                i.TotalPrice
+            })
+        })
+    });
+}
 }
