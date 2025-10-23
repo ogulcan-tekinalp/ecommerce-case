@@ -30,8 +30,9 @@ builder.Services.AddOrderServiceInfrastructure(builder.Configuration);
 // Application layer
 builder.Services.AddOrderServiceApplication();
 
-// ⚡ Register Order Saga as Singleton (keeps event subscriptions alive)
+// ⚡ Register Order Saga and Simulator as Singleton
 builder.Services.AddSingleton<OrderSaga>();
+builder.Services.AddSingleton<StockPaymentSimulator>();
 
 var app = builder.Build();
 
@@ -45,8 +46,12 @@ app.UseHttpsRedirection();
 app.UseMiddleware<ErrorHandlingMiddleware>(); 
 app.MapControllers();
 
-// ⚡ Initialize the saga (this activates event subscriptions)
+// ⚡ CRITICAL: Initialize simulator FIRST (so it subscribes to OrderCreatedEvent)
+var simulator = app.Services.GetRequiredService<StockPaymentSimulator>();
+// ⚡ Then initialize saga
 var saga = app.Services.GetRequiredService<OrderSaga>();
-app.Logger.LogInformation("Order Saga initialized and subscribed to events");
+
+app.Logger.LogInformation("✅ Order Saga initialized and subscribed to events");
+app.Logger.LogInformation("✅ Stock & Payment Simulator initialized (TEST MODE)");
 
 app.Run();

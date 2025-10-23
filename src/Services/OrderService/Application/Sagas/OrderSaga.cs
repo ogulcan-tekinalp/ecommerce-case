@@ -3,21 +3,21 @@ namespace OrderService.Application.Sagas;
 using BuildingBlocks.Messaging;
 using BuildingBlocks.Messaging.Events;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.DependencyInjection;
 using OrderService.Application.Abstractions;
 
 public sealed class OrderSaga
 {
     private readonly IMessageBus _bus;
-    private readonly IOrderRepository _repo;
+    private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<OrderSaga> _logger;
 
-    public OrderSaga(IMessageBus bus, IOrderRepository repo, ILogger<OrderSaga> logger)
+    public OrderSaga(IMessageBus bus, IServiceScopeFactory scopeFactory, ILogger<OrderSaga> logger)
     {
         _bus = bus;
-        _repo = repo;
+        _scopeFactory = scopeFactory;
         _logger = logger;
 
-        // Subscribe to events
         _bus.Subscribe<StockReservedEvent>(HandleStockReservedAsync);
         _bus.Subscribe<PaymentProcessedEvent>(HandlePaymentProcessedAsync);
         _bus.Subscribe<PaymentFailedEvent>(HandlePaymentFailedAsync);
@@ -27,14 +27,16 @@ public sealed class OrderSaga
     {
         _logger.LogInformation("Starting order flow for Order {OrderId}", orderId);
 
-        var order = await _repo.GetByIdAsync(orderId, ct);
+        using var scope = _scopeFactory.CreateScope();
+        var repo = scope.ServiceProvider.GetRequiredService<IOrderRepository>();
+
+        var order = await repo.GetByIdAsync(orderId, ct);
         if (order is null)
         {
             _logger.LogError("Order {OrderId} not found", orderId);
             return;
         }
 
-        // Step 1: Publish OrderCreatedEvent to trigger stock reservation
         var orderCreatedEvent = new OrderCreatedEvent
         {
             OrderId = order.Id,
@@ -57,17 +59,19 @@ public sealed class OrderSaga
         _logger.LogInformation("Handling StockReservedEvent for Order {OrderId}, Success: {Success}",
             evt.OrderId, evt.Success);
 
-        var order = await _repo.GetByIdAsync(evt.OrderId);
+        using var scope = _scopeFactory.CreateScope();
+        var repo = scope.ServiceProvider.GetRequiredService<IOrderRepository>();
+
+        var order = await repo.GetByIdAsync(evt.OrderId);
         if (order is null) return;
 
         if (!evt.Success)
         {
-            // Stock reservation failed - cancel order
             _logger.LogWarning("Stock reservation failed for Order {OrderId}: {Reason}",
                 evt.OrderId, evt.FailureReason);
             
             order.Cancel($"Stock reservation failed: {evt.FailureReason}");
-            await _repo.SaveChangesAsync();
+            await repo.SaveChangesAsync();
 
             await _bus.PublishAsync(new OrderCancelledEvent
             {
@@ -78,22 +82,11 @@ public sealed class OrderSaga
             return;
         }
 
-        // Stock reserved successfully - proceed to payment
+        // Stock reserved successfully - save reservation ID and wait for payment
         order.StockReservationId = evt.ReservationId;
-        await _repo.SaveChangesAsync();
-
-        var paymentEvent = new PaymentProcessedEvent
-        {
-            OrderId = order.Id,
-            PaymentId = Guid.NewGuid(),
-            Amount = order.TotalAmount,
-            CorrelationId = evt.CorrelationId
-        };
-
-        // In real scenario, this would be sent to PaymentService
-        // For now, we'll simulate payment processing here
-        await _bus.PublishAsync(paymentEvent);
-        _logger.LogInformation("Triggered payment processing for Order {OrderId}", evt.OrderId);
+        await repo.SaveChangesAsync();
+        
+        _logger.LogInformation("Stock reserved for Order {OrderId}, waiting for payment...", evt.OrderId);
     }
 
     private async Task HandlePaymentProcessedAsync(PaymentProcessedEvent evt)
@@ -101,23 +94,25 @@ public sealed class OrderSaga
         _logger.LogInformation("Handling PaymentProcessedEvent for Order {OrderId}, Success: {Success}",
             evt.OrderId, evt.Success);
 
-        var order = await _repo.GetByIdAsync(evt.OrderId);
+        using var scope = _scopeFactory.CreateScope();
+        var repo = scope.ServiceProvider.GetRequiredService<IOrderRepository>();
+
+        var order = await repo.GetByIdAsync(evt.OrderId);
         if (order is null) return;
 
         if (!evt.Success)
         {
-            // Payment failed - compensate: release stock
             _logger.LogWarning("Payment failed for Order {OrderId}: {Reason}",
                 evt.OrderId, evt.FailureReason);
 
-            await CompensateFailedOrderAsync(order, $"Payment failed: {evt.FailureReason}");
+            await CompensateFailedOrderAsync(order, $"Payment failed: {evt.FailureReason}", repo);
             return;
         }
 
         // Payment successful - confirm order!
         order.PaymentId = evt.PaymentId;
         order.Confirm();
-        await _repo.SaveChangesAsync();
+        await repo.SaveChangesAsync();
 
         await _bus.PublishAsync(new OrderConfirmedEvent
         {
@@ -130,17 +125,19 @@ public sealed class OrderSaga
 
     private async Task HandlePaymentFailedAsync(PaymentFailedEvent evt)
     {
-        var order = await _repo.GetByIdAsync(evt.OrderId);
+        using var scope = _scopeFactory.CreateScope();
+        var repo = scope.ServiceProvider.GetRequiredService<IOrderRepository>();
+
+        var order = await repo.GetByIdAsync(evt.OrderId);
         if (order is null) return;
 
-        await CompensateFailedOrderAsync(order, evt.Reason);
+        await CompensateFailedOrderAsync(order, evt.Reason, repo);
     }
 
-    private async Task CompensateFailedOrderAsync(Domain.Entities.Order order, string reason)
+    private async Task CompensateFailedOrderAsync(Domain.Entities.Order order, string reason, IOrderRepository repo)
     {
         _logger.LogWarning("Compensating failed order {OrderId}: {Reason}", order.Id, reason);
 
-        // Release stock reservation
         if (order.StockReservationId.HasValue)
         {
             await _bus.PublishAsync(new StockReleasedEvent
@@ -151,9 +148,8 @@ public sealed class OrderSaga
             });
         }
 
-        // Cancel order
         order.Cancel(reason);
-        await _repo.SaveChangesAsync();
+        await repo.SaveChangesAsync();
 
         await _bus.PublishAsync(new OrderCancelledEvent
         {
