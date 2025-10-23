@@ -14,8 +14,15 @@ public sealed class OrderRepository : IOrderRepository
 
     public Task<Order?> GetByIdAsync(Guid id, CancellationToken ct = default)
         => _db.Orders
-            .Include(o => o.Items) // ⚡ Important: Load items!
+            .Include(o => o.Items)
             .FirstOrDefaultAsync(x => x.Id == id, ct);
+
+    public Task<List<Order>> GetByCustomerIdAsync(Guid customerId, CancellationToken ct = default)
+        => _db.Orders
+            .Include(o => o.Items)
+            .Where(o => o.CustomerId == customerId)
+            .OrderByDescending(o => o.CreatedAtUtc) // En yeni önce
+            .ToListAsync(ct);
 
     public Task SaveChangesAsync(CancellationToken ct = default)
         => _db.SaveChangesAsync(ct);
