@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using OrderService.Api.Contracts;
 using OrderService.Application.Abstractions;
 using OrderService.Application.Orders.CreateOrder;
+using OrderService.Application.Orders.CancelOrder;
 
 [ApiController]
 [Route("api/v1/orders")]
@@ -55,6 +56,8 @@ public class OrdersController : ControllerBase
             order.ConfirmedAtUtc,
             order.CancelledAtUtc,
             order.CancellationReason,
+            order.IsVip,
+            CanBeCancelled = order.CanBeCancelled(), // ⚡ Kullanıcıya göster
             Items = order.Items.Select(i => new
             {
                 i.ProductId,
@@ -64,5 +67,27 @@ public class OrdersController : ControllerBase
                 i.TotalPrice
             })
         });
+    }
+
+    // ⚡ YENİ ENDPOINT: Cancel Order
+    [HttpPut("{orderId:guid}/cancel")]
+    public async Task<IActionResult> Cancel(
+        [FromRoute] Guid orderId, 
+        [FromBody] CancelOrderRequest? request,
+        CancellationToken ct)
+    {
+        var command = new CancelOrderCommand(orderId, request?.Reason);
+        var result = await _mediator.Send(command, ct);
+
+        if (!result)
+        {
+            return BadRequest(new 
+            { 
+                error = "Order cannot be cancelled",
+                message = "Order may be already cancelled, delivered, or outside the 2-hour cancellation window"
+            });
+        }
+
+        return Ok(new { message = "Order cancelled successfully" });
     }
 }
