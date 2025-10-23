@@ -1,11 +1,10 @@
+namespace OrderService.Api.Controllers;
+
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using OrderService.Api.Contracts;
 using OrderService.Application.Abstractions;
 using OrderService.Application.Orders.CreateOrder;
-
-
-namespace OrderService.Api.Controllers;
 
 [ApiController]
 [Route("api/v1/orders")]
@@ -23,7 +22,20 @@ public class OrdersController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateOrderRequest request, CancellationToken ct)
     {
-        var id = await _mediator.Send(new CreateOrderCommand(request.CustomerId, request.TotalAmount), ct);
+        var items = request.Items.Select(i => new CreateOrderItemDto(
+            i.ProductId,
+            i.ProductName,
+            i.Quantity,
+            i.UnitPrice
+        )).ToList();
+
+        var command = new CreateOrderCommand(
+            CustomerId: request.CustomerId,
+            IsVip: request.IsVip,
+            Items: items
+        );
+
+        var id = await _mediator.Send(command, ct);
         return CreatedAtAction(nameof(GetById), new { orderId = id }, new { orderId = id });
     }
 
@@ -32,13 +44,25 @@ public class OrdersController : ControllerBase
     {
         var order = await _repo.GetByIdAsync(orderId, ct);
         if (order is null) return NotFound();
+        
         return Ok(new
         {
             order.Id,
             order.CustomerId,
             order.TotalAmount,
             Status = order.Status.ToString(),
-            order.CreatedAtUtc
+            order.CreatedAtUtc,
+            order.ConfirmedAtUtc,
+            order.CancelledAtUtc,
+            order.CancellationReason,
+            Items = order.Items.Select(i => new
+            {
+                i.ProductId,
+                i.ProductName,
+                i.Quantity,
+                i.UnitPrice,
+                i.TotalPrice
+            })
         });
     }
 }

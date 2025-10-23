@@ -4,10 +4,13 @@ using OrderService.Application.Orders.CreateOrder;
 using OrderService.Application;
 using OrderService.Infrastructure;
 using OrderService.Api.Middleware;
-
+using BuildingBlocks.Messaging;
+using OrderService.Application.Sagas;
 
 var builder = WebApplication.CreateBuilder(args);
-builder.Services.AddOrderServiceApplication();
+
+// ⚡ Add Message Bus
+builder.Services.AddInMemoryMessageBus();
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
@@ -24,6 +27,12 @@ builder.Services.AddValidatorsFromAssemblyContaining<CreateOrderCommandValidator
 // Infrastructure (DbContext + Repo)
 builder.Services.AddOrderServiceInfrastructure(builder.Configuration);
 
+// Application layer
+builder.Services.AddOrderServiceApplication();
+
+// ⚡ Register Order Saga as Singleton (keeps event subscriptions alive)
+builder.Services.AddSingleton<OrderSaga>();
+
 var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
@@ -34,7 +43,10 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 app.UseMiddleware<ErrorHandlingMiddleware>(); 
-
 app.MapControllers();
-app.Run();
 
+// ⚡ Initialize the saga (this activates event subscriptions)
+var saga = app.Services.GetRequiredService<OrderSaga>();
+app.Logger.LogInformation("Order Saga initialized and subscribed to events");
+
+app.Run();

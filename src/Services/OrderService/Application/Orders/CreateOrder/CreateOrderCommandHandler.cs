@@ -3,7 +3,6 @@ using OrderService.Application.Abstractions;
 using OrderService.Domain.Entities;
 
 namespace OrderService.Application.Orders.CreateOrder;
-
 public sealed class CreateOrderCommandHandler : IRequestHandler<CreateOrderCommand, Guid>
 {
     private readonly IOrderRepository _repo;
@@ -14,8 +13,7 @@ public sealed class CreateOrderCommandHandler : IRequestHandler<CreateOrderComma
         var order = new Order
         {
             CustomerId = request.CustomerId,
-            TotalAmount = request.TotalAmount
-        };
+            IsVip = request.IsVip,};
 
         await _repo.AddAsync(order, ct);
         await _repo.SaveChangesAsync(ct);

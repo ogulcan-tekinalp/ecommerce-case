@@ -1,5 +1,9 @@
-using MediatR;
-
 namespace OrderService.Application.Orders.CreateOrder;
 
-public sealed record CreateOrderCommand(Guid CustomerId, decimal TotalAmount) : IRequest<Guid>;
+using MediatR;
+
+public sealed record CreateOrderCommand(
+    Guid CustomerId,
+    bool IsVip,
+    List<CreateOrderItemDto> Items
+) : IRequest<Guid>;
