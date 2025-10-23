@@ -6,6 +6,8 @@ using OrderService.Api.Contracts;
 using OrderService.Application.Abstractions;
 using OrderService.Application.Orders.CreateOrder;
 using OrderService.Application.Orders.CancelOrder;
+using OrderService.Application.Orders.RetryOrder;
+
 
 [ApiController]
 [Route("api/v1/orders")]
@@ -90,33 +92,50 @@ public class OrdersController : ControllerBase
         return Ok(new { message = "Order cancelled successfully" });
     }
     [HttpGet("customer/{customerId:guid}")]
-public async Task<IActionResult> GetByCustomerId([FromRoute] Guid customerId, CancellationToken ct)
-{
-    var orders = await _repo.GetByCustomerIdAsync(customerId, ct);
-    
-    return Ok(new
+    public async Task<IActionResult> GetByCustomerId([FromRoute] Guid customerId, CancellationToken ct)
     {
-        customerId,
-        totalOrders = orders.Count,
-        orders = orders.Select(o => new
+        var orders = await _repo.GetByCustomerIdAsync(customerId, ct);
+
+        return Ok(new
         {
-            o.Id,
-            o.TotalAmount,
-            Status = o.Status.ToString(),
-            o.CreatedAtUtc,
-            o.ConfirmedAtUtc,
-            o.CancelledAtUtc,
-            o.CancellationReason,
-            ItemCount = o.Items.Count,
-            Items = o.Items.Select(i => new
+            customerId,
+            totalOrders = orders.Count,
+            orders = orders.Select(o => new
             {
-                i.ProductId,
-                i.ProductName,
-                i.Quantity,
-                i.UnitPrice,
-                i.TotalPrice
+                o.Id,
+                o.TotalAmount,
+                Status = o.Status.ToString(),
+                o.CreatedAtUtc,
+                o.ConfirmedAtUtc,
+                o.CancelledAtUtc,
+                o.CancellationReason,
+                ItemCount = o.Items.Count,
+                Items = o.Items.Select(i => new
+                {
+                    i.ProductId,
+                    i.ProductName,
+                    i.Quantity,
+                    i.UnitPrice,
+                    i.TotalPrice
+                })
             })
-        })
-    });
+        });
+    }
+[HttpPost("{orderId:guid}/retry")]
+public async Task<IActionResult> Retry([FromRoute] Guid orderId, CancellationToken ct)
+{
+    var command = new RetryOrderCommand(orderId);
+    var result = await _mediator.Send(command, ct);
+
+    if (!result)
+    {
+        return BadRequest(new 
+        { 
+            error = "Order cannot be retried",
+            message = "Order must be in cancelled status and within 2 hours of creation"
+        });
+    }
+
+    return Ok(new { message = "Order retry initiated successfully" });
 }
 }
