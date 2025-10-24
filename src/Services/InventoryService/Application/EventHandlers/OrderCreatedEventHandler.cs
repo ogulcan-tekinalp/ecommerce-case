@@ -3,22 +3,25 @@ namespace InventoryService.Application.EventHandlers;
 using BuildingBlocks.Messaging;
 using BuildingBlocks.Messaging.Events;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.DependencyInjection;
 using InventoryService.Application.Inventory.ReserveStock;
 using MediatR;
 
 public sealed class OrderCreatedEventHandler
 {
-    private readonly ISender _mediator;
+    private readonly IServiceScopeFactory _scopeFactory;
     private readonly IMessageBus _bus;
     private readonly ILogger<OrderCreatedEventHandler> _logger;
 
-    public OrderCreatedEventHandler(ISender mediator, IMessageBus bus, ILogger<OrderCreatedEventHandler> logger)
+    public OrderCreatedEventHandler(
+        IServiceScopeFactory scopeFactory,
+        IMessageBus bus, 
+        ILogger<OrderCreatedEventHandler> logger)
     {
-        _mediator = mediator;
+        _scopeFactory = scopeFactory;
         _bus = bus;
         _logger = logger;
 
-        // Subscribe to OrderCreatedEvent
         _bus.Subscribe<OrderCreatedEvent>(HandleAsync);
     }
 
@@ -26,14 +29,16 @@ public sealed class OrderCreatedEventHandler
     {
         _logger.LogInformation("📦 [INVENTORY] Received OrderCreatedEvent for Order {OrderId}", evt.OrderId);
 
+        using var scope = _scopeFactory.CreateScope();
+        var mediator = scope.ServiceProvider.GetRequiredService<ISender>();
+
         var command = new ReserveStockCommand(
             evt.OrderId,
             evt.Items.Select(i => new ReserveStockItemDto(i.ProductId, (int)i.Quantity)).ToList()
         );
 
-        var result = await _mediator.Send(command);
+        var result = await mediator.Send(command);
 
-        // Publish StockReservedEvent
         await _bus.PublishAsync(new StockReservedEvent
         {
             OrderId = evt.OrderId,

@@ -3,22 +3,25 @@ namespace InventoryService.Application.EventHandlers;
 using BuildingBlocks.Messaging;
 using BuildingBlocks.Messaging.Events;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.DependencyInjection;
 using InventoryService.Application.Inventory.ReleaseStock;
 using MediatR;
 
 public sealed class StockReleasedEventHandler
 {
-    private readonly ISender _mediator;
+    private readonly IServiceScopeFactory _scopeFactory;
     private readonly IMessageBus _bus;
     private readonly ILogger<StockReleasedEventHandler> _logger;
 
-    public StockReleasedEventHandler(ISender mediator, IMessageBus bus, ILogger<StockReleasedEventHandler> logger)
+    public StockReleasedEventHandler(
+        IServiceScopeFactory scopeFactory,
+        IMessageBus bus, 
+        ILogger<StockReleasedEventHandler> logger)
     {
-        _mediator = mediator;
+        _scopeFactory = scopeFactory;
         _bus = bus;
         _logger = logger;
 
-        // Subscribe to StockReleasedEvent
         _bus.Subscribe<StockReleasedEvent>(HandleAsync);
     }
 
@@ -27,8 +30,11 @@ public sealed class StockReleasedEventHandler
         _logger.LogInformation("📦 [INVENTORY] Received StockReleasedEvent for Order {OrderId}, Reservation {ReservationId}",
             evt.OrderId, evt.ReservationId);
 
+        using var scope = _scopeFactory.CreateScope();
+        var mediator = scope.ServiceProvider.GetRequiredService<ISender>();
+
         var command = new ReleaseStockCommand(evt.ReservationId, "Order cancelled or payment failed");
-        var result = await _mediator.Send(command);
+        var result = await mediator.Send(command);
 
         if (result)
         {

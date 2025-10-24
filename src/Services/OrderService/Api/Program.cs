@@ -10,8 +10,10 @@ using OrderService.Application.Sagas;
 var builder = WebApplication.CreateBuilder(args);
 
 // ⚡ Add Message Bus
-builder.Services.AddInMemoryMessageBus();
-
+var rabbitMqConnection = builder.Configuration.GetConnectionString("RabbitMQ")
+    ?? "amqp://guest:guest@localhost:5672";
+    
+builder.Services.AddRabbitMqMessageBus(rabbitMqConnection);
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddOpenApi();
