@@ -53,13 +53,40 @@ public class PaymentController : ControllerBase
     {
         // Simple validation mock
         var isValid = request.Method >= 0 && (int)request.Method <= 3;
-        
+
         return Ok(new
         {
             isValid,
             method = request.Method.ToString()
         });
     }
+    [HttpPost("refund")]
+public async Task<IActionResult> RefundPayment(
+    [FromBody] RefundPaymentRequest request,
+    CancellationToken ct)
+{
+    return Ok(new
+    {
+        refundId = Guid.NewGuid(),
+        paymentId = request.PaymentId,
+        amount = request.Amount,
+        status = "Refunded",
+        message = "Refund processed successfully"
+    });
+}
+
+[HttpGet("{paymentId}")]
+public async Task<IActionResult> GetPaymentStatus(Guid paymentId)
+{
+    return Ok(new
+    {
+        paymentId,
+        status = "Completed",
+        transactionId = Guid.NewGuid().ToString("N")[..16].ToUpper(),
+        amount = 15000m,
+        createdAt = DateTime.UtcNow
+    });
+}
 }
 
 public record ProcessPaymentRequest(
@@ -70,3 +97,4 @@ public record ProcessPaymentRequest(
 );
 
 public record ValidatePaymentRequest(PaymentMethod Method);
+public record RefundPaymentRequest(Guid PaymentId, decimal Amount);

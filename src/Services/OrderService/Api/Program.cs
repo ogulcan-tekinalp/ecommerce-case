@@ -6,6 +6,13 @@ using OrderService.Infrastructure;
 using OrderService.Api.Middleware;
 using BuildingBlocks.Messaging;
 using OrderService.Application.Sagas;
+using Serilog;
+
+Log.Logger = new LoggerConfiguration()
+    .WriteTo.Console()
+    .WriteTo.File("logs/orderservice-.txt", rollingInterval: RollingInterval.Day)
+    .Enrich.WithProperty("Service", "OrderService")
+    .CreateLogger();
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -37,6 +44,7 @@ builder.Services.AddOrderServiceApplication();
 
 // ⚡ Register Order Saga and Simulator as Singleton
 builder.Services.AddSingleton<OrderSaga>();
+builder.Host.UseSerilog();
 
 var app = builder.Build();
 
@@ -58,3 +66,5 @@ var saga = app.Services.GetRequiredService<OrderSaga>();
 app.Logger.LogInformation("✅ Order Saga initialized and subscribed to events");
 
 app.Run();
+
+Log.CloseAndFlush();

@@ -1,5 +1,6 @@
 namespace OrderService.Api.Controllers;
 
+
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using OrderService.Api.Contracts;
@@ -7,6 +8,10 @@ using OrderService.Application.Abstractions;
 using OrderService.Application.Orders.CreateOrder;
 using OrderService.Application.Orders.CancelOrder;
 using OrderService.Application.Orders.RetryOrder;
+using OrderService.Application.Orders.ShipOrder;
+
+public record ShipOrderRequest(string TrackingNumber, string? Carrier = "DHL");
+
 
 
 [ApiController]
@@ -21,28 +26,48 @@ public class OrdersController : ControllerBase
         _mediator = mediator;
         _repo = repo;
     }
-    
+
 
     [HttpPost]
-[HttpPost]
-public async Task<IActionResult> Create([FromBody] CreateOrderRequest request, CancellationToken ct)
+    [HttpPost]
+    public async Task<IActionResult> Create([FromBody] CreateOrderRequest request, CancellationToken ct)
+    {
+        var items = request.Items.Select(i => new CreateOrderItemDto(
+            i.ProductId,
+            i.ProductName,
+            i.Quantity,
+            i.UnitPrice
+        )).ToList();
+
+        var command = new CreateOrderCommand(
+            CustomerId: request.CustomerId,
+            IsVip: request.IsVip,
+            Items: items,
+            IdempotencyKey: request.IdempotencyKey
+        );
+
+        var id = await _mediator.Send(command, ct);
+        return CreatedAtAction(nameof(GetById), new { orderId = id }, new { orderId = id });
+    }
+[HttpPut("{orderId:guid}/ship")]
+public async Task<IActionResult> Ship(
+    [FromRoute] Guid orderId,
+    [FromBody] ShipOrderRequest request,
+    CancellationToken ct)
 {
-    var items = request.Items.Select(i => new CreateOrderItemDto(
-        i.ProductId,
-        i.ProductName,
-        i.Quantity,
-        i.UnitPrice
-    )).ToList();
+    var command = new ShipOrderCommand(orderId, request.TrackingNumber, request.Carrier ?? "DHL");
+    var result = await _mediator.Send(command, ct);
 
-    var command = new CreateOrderCommand(
-        CustomerId: request.CustomerId,
-        IsVip: request.IsVip,
-        Items: items,
-        IdempotencyKey: request.IdempotencyKey
-    );
+    if (!result)
+    {
+        return BadRequest(new
+        {
+            error = "Order cannot be shipped",
+            message = "Order must be in confirmed status to be shipped"
+        });
+    }
 
-    var id = await _mediator.Send(command, ct);
-    return CreatedAtAction(nameof(GetById), new { orderId = id }, new { orderId = id });
+    return Ok(new { message = "Order shipped successfully" });
 }
 
     [HttpGet("{orderId:guid}")]

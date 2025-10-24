@@ -37,6 +37,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "InventoryService.Infrastruc
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "InventoryService.Domain", "src\Services\InventoryService\Domain\InventoryService.Domain.csproj", "{577451D3-F08A-4117-84ED-F5310817B15E}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{0AB3BF05-4346-4AA6-1389-037BE0695223}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OrderService.Tests", "tests\OrderService.Tests\OrderService.Tests.csproj", "{423C8CA8-DFE6-4645-AB65-AACE09A73F52}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -215,6 +219,18 @@ Global
 		{577451D3-F08A-4117-84ED-F5310817B15E}.Release|x64.Build.0 = Release|Any CPU
 		{577451D3-F08A-4117-84ED-F5310817B15E}.Release|x86.ActiveCfg = Release|Any CPU
 		{577451D3-F08A-4117-84ED-F5310817B15E}.Release|x86.Build.0 = Release|Any CPU
+		{423C8CA8-DFE6-4645-AB65-AACE09A73F52}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{423C8CA8-DFE6-4645-AB65-AACE09A73F52}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{423C8CA8-DFE6-4645-AB65-AACE09A73F52}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{423C8CA8-DFE6-4645-AB65-AACE09A73F52}.Debug|x64.Build.0 = Debug|Any CPU
+		{423C8CA8-DFE6-4645-AB65-AACE09A73F52}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{423C8CA8-DFE6-4645-AB65-AACE09A73F52}.Debug|x86.Build.0 = Debug|Any CPU
+		{423C8CA8-DFE6-4645-AB65-AACE09A73F52}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{423C8CA8-DFE6-4645-AB65-AACE09A73F52}.Release|Any CPU.Build.0 = Release|Any CPU
+		{423C8CA8-DFE6-4645-AB65-AACE09A73F52}.Release|x64.ActiveCfg = Release|Any CPU
+		{423C8CA8-DFE6-4645-AB65-AACE09A73F52}.Release|x64.Build.0 = Release|Any CPU
+		{423C8CA8-DFE6-4645-AB65-AACE09A73F52}.Release|x86.ActiveCfg = Release|Any CPU
+		{423C8CA8-DFE6-4645-AB65-AACE09A73F52}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -236,5 +252,6 @@ Global
 		{E69A0B14-649D-40E4-9424-85AF48E02A72} = {408E099D-E5BE-D435-3378-22A4F9BFB988}
 		{43A52FD2-7289-44CC-89BE-24F491026735} = {408E099D-E5BE-D435-3378-22A4F9BFB988}
 		{577451D3-F08A-4117-84ED-F5310817B15E} = {408E099D-E5BE-D435-3378-22A4F9BFB988}
+		{423C8CA8-DFE6-4645-AB65-AACE09A73F52} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
 	EndGlobalSection
 EndGlobal

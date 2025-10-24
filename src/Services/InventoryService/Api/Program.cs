@@ -6,8 +6,18 @@ using InventoryService.Application.EventHandlers;
 using InventoryService.Infrastructure;
 using InventoryService.Infrastructure.Persistence;
 using InventoryService.Domain.Entities;
+using InventoryService.Application.BackgroundJobs;
+using Serilog;
+
+Log.Logger = new LoggerConfiguration()
+    .WriteTo.Console()
+    .WriteTo.File("logs/inventoryservice-.txt", rollingInterval: RollingInterval.Day)
+    .Enrich.WithProperty("Service", "InventoryService")
+    .CreateLogger();
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Host.UseSerilog();
 
 // Add Message Bus
 var rabbitMqConnection = builder.Configuration.GetConnectionString("RabbitMQ") 
@@ -29,12 +39,17 @@ builder.Services.AddValidatorsFromAssemblyContaining<ReserveStockCommandValidato
 
 // Infrastructure (DbContext + Repositories)
 builder.Services.AddInventoryServiceInfrastructure(builder.Configuration);
+builder.Services.AddHostedService<StockReservationCleanupService>();
 
 // Event Handlers (Singleton - keep subscriptions alive)
 builder.Services.AddSingleton<OrderCreatedEventHandler>();
 builder.Services.AddSingleton<StockReleasedEventHandler>();
 
+
+
 var app = builder.Build();
+
+
 
 if (app.Environment.IsDevelopment())
 {
@@ -70,3 +85,5 @@ if (app.Environment.IsDevelopment())
     }
 }
 app.Run();
+
+Log.CloseAndFlush();
