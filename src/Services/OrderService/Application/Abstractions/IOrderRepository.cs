@@ -9,4 +9,6 @@ public interface IOrderRepository
     Task<Order?> GetByIdAsync(Guid id, CancellationToken ct = default);
     Task<List<Order>> GetByCustomerIdAsync(Guid customerId, CancellationToken ct = default); // ⚡ YENİ
     Task SaveChangesAsync(CancellationToken ct = default);
+
+    Task<Order?> GetByIdempotencyKeyAsync(string idempotencyKey, CancellationToken ct = default);
 }

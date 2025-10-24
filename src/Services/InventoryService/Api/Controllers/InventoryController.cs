@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using InventoryService.Application.Inventory.ReserveStock;
 using InventoryService.Application.Inventory.ReleaseStock;
 using InventoryService.Application.Inventory.CheckAvailability;
+using InventoryService.Application.Inventory.GetProductStock;
 
 [ApiController]
 [Route("api/v1/inventory")]
@@ -16,7 +17,7 @@ public class InventoryController : ControllerBase
 
     [HttpPost("check-availability")]
     public async Task<IActionResult> CheckAvailability(
-        [FromBody] CheckAvailabilityRequest request, 
+        [FromBody] CheckAvailabilityRequest request,
         CancellationToken ct)
     {
         var query = new CheckAvailabilityQuery(
@@ -26,6 +27,17 @@ public class InventoryController : ControllerBase
         var result = await _mediator.Send(query, ct);
         return Ok(result);
     }
+    [HttpGet("products/{productId}/stock")]
+public async Task<IActionResult> GetProductStock(Guid productId, CancellationToken ct)
+{
+    var query = new GetProductStockQuery(productId);
+    var result = await _mediator.Send(query, ct);
+
+    if (result == null)
+        return NotFound(new { error = "Product not found" });
+
+    return Ok(result);
+}
 
     [HttpPost("reserve")]
     public async Task<IActionResult> Reserve(

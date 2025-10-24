@@ -18,6 +18,9 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddOpenApi();
 builder.Services.AddTransient<ErrorHandlingMiddleware>();
+builder.Services.AddHealthChecks()
+    .AddNpgSql(builder.Configuration.GetConnectionString("Default")!)
+    .AddRabbitMQ(rabbitConnectionString: rabbitMqConnection);
 
 // MediatR v12
 builder.Services.AddMediatR(cfg =>
@@ -45,6 +48,8 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 app.UseMiddleware<ErrorHandlingMiddleware>(); 
+app.MapHealthChecks("/health");
+
 app.MapControllers();
 
 // ⚡ Then initialize saga

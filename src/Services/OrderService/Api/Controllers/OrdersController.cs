@@ -24,24 +24,26 @@ public class OrdersController : ControllerBase
     
 
     [HttpPost]
-    public async Task<IActionResult> Create([FromBody] CreateOrderRequest request, CancellationToken ct)
-    {
-        var items = request.Items.Select(i => new CreateOrderItemDto(
-            i.ProductId,
-            i.ProductName,
-            i.Quantity,
-            i.UnitPrice
-        )).ToList();
+[HttpPost]
+public async Task<IActionResult> Create([FromBody] CreateOrderRequest request, CancellationToken ct)
+{
+    var items = request.Items.Select(i => new CreateOrderItemDto(
+        i.ProductId,
+        i.ProductName,
+        i.Quantity,
+        i.UnitPrice
+    )).ToList();
 
-        var command = new CreateOrderCommand(
-            CustomerId: request.CustomerId,
-            IsVip: request.IsVip,
-            Items: items
-        );
+    var command = new CreateOrderCommand(
+        CustomerId: request.CustomerId,
+        IsVip: request.IsVip,
+        Items: items,
+        IdempotencyKey: request.IdempotencyKey
+    );
 
-        var id = await _mediator.Send(command, ct);
-        return CreatedAtAction(nameof(GetById), new { orderId = id }, new { orderId = id });
-    }
+    var id = await _mediator.Send(command, ct);
+    return CreatedAtAction(nameof(GetById), new { orderId = id }, new { orderId = id });
+}
 
     [HttpGet("{orderId:guid}")]
     public async Task<IActionResult> GetById([FromRoute] Guid orderId, CancellationToken ct)

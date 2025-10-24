@@ -12,6 +12,13 @@ public class Order
     public DateTime? ConfirmedAtUtc { get; set; }
     public DateTime? CancelledAtUtc { get; set; }
     public string? CancellationReason { get; set; }
+
+    public string? IdempotencyKey { get; private set; }
+
+public void SetIdempotencyKey(string key)
+{
+    IdempotencyKey = key;
+}
     
     // Navigation property for order items
     public List<OrderItem> Items { get; set; } = new();
@@ -47,4 +54,5 @@ public class Order
         // Business rule: Can only cancel within 2 hours
         return DateTime.UtcNow - CreatedAtUtc <= TimeSpan.FromHours(2);
     }
+    
 }

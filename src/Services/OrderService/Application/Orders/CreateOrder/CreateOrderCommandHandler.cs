@@ -1,5 +1,4 @@
 namespace OrderService.Application.Orders.CreateOrder;
-
 using MediatR;
 using Microsoft.Extensions.Logging;
 using OrderService.Application.Abstractions;
@@ -11,7 +10,7 @@ public sealed class CreateOrderCommandHandler : IRequestHandler<CreateOrderComma
     private readonly IOrderRepository _repo;
     private readonly OrderSaga _saga;
     private readonly ILogger<CreateOrderCommandHandler> _logger;
-
+    
     public CreateOrderCommandHandler(
         IOrderRepository repo,
         OrderSaga saga,
@@ -21,10 +20,20 @@ public sealed class CreateOrderCommandHandler : IRequestHandler<CreateOrderComma
         _saga = saga;
         _logger = logger;
     }
-
+    
     public async Task<Guid> Handle(CreateOrderCommand req, CancellationToken ct)
     {
-        // Create order with items
+        if (!string.IsNullOrEmpty(req.IdempotencyKey))
+        {
+            var existingOrder = await _repo.GetByIdempotencyKeyAsync(req.IdempotencyKey, ct);
+            if (existingOrder != null)
+            {
+                _logger.LogInformation("Duplicate order detected with IdempotencyKey: {Key}, returning existing OrderId: {OrderId}",
+                    req.IdempotencyKey, existingOrder.Id);
+                return existingOrder.Id;
+            }
+        }
+        
         var order = new Order
         {
             CustomerId = req.CustomerId,
@@ -38,18 +47,21 @@ public sealed class CreateOrderCommandHandler : IRequestHandler<CreateOrderComma
                 UnitPrice = i.UnitPrice
             }).ToList()
         };
-
+        
+        if (!string.IsNullOrEmpty(req.IdempotencyKey))
+        {
+            order.SetIdempotencyKey(req.IdempotencyKey);
+        }
+        
         await _repo.AddAsync(order, ct);
         await _repo.SaveChangesAsync(ct);
-
+        
         _logger.LogInformation("Order {OrderId} created for Customer {CustomerId}, Total: {Total}",
             order.Id, order.CustomerId, order.TotalAmount);
-
         _logger.LogInformation("🚀 Starting saga for Order {OrderId}", order.Id);
         
-        // Start the saga orchestration (fire-and-forget)
         _ = Task.Run(async () => await _saga.StartOrderFlowAsync(order.Id, ct), ct);
-
+        
         return order.Id;
     }
 }

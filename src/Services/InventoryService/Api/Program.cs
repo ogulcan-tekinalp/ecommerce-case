@@ -16,6 +16,9 @@ builder.Services.AddRabbitMqMessageBus(rabbitMqConnection);
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddOpenApi();
+builder.Services.AddHealthChecks()
+    .AddNpgSql(builder.Configuration.GetConnectionString("Default")!)
+    .AddRabbitMQ(rabbitConnectionString: rabbitMqConnection);
 
 // MediatR
 builder.Services.AddMediatR(cfg =>
@@ -40,6 +43,8 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.MapHealthChecks("/health");
+
 app.MapControllers();
 
 // Initialize event handlers

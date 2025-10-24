@@ -1,9 +1,10 @@
 namespace OrderService.Api.Contracts;
 
-public sealed record CreateOrderRequest(
+public record CreateOrderRequest(
     Guid CustomerId,
     bool IsVip,
-    List<CreateOrderItemRequest> Items
+    List<CreateOrderItemRequest> Items,
+    string? IdempotencyKey = null
 );
 
 public record CreateOrderItemRequest(

@@ -13,6 +13,8 @@ builder.Services.AddRabbitMqMessageBus(rabbitMqConnection);
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddOpenApi();
+builder.Services.AddHealthChecks()
+.AddRabbitMQ(rabbitConnectionString: rabbitMqConnection);
 
 builder.Services.AddMediatR(cfg =>
     cfg.RegisterServicesFromAssemblyContaining<ProcessPaymentCommand>());
@@ -29,6 +31,8 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.MapHealthChecks("/health");
+
 app.MapControllers();
 
 var eventHandler = app.Services.GetRequiredService<StockReservedEventHandler>();
