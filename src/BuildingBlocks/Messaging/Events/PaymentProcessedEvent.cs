@@ -6,5 +6,6 @@ public sealed record PaymentProcessedEvent : IntegrationEvent
     public Guid PaymentId { get; init; }
     public bool Success { get; init; }
     public string? FailureReason { get; init; }
+    public string? TransactionId { get; init; }
     public decimal Amount { get; init; }
 }
