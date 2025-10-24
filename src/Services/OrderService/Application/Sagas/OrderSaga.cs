@@ -6,7 +6,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.DependencyInjection;
 using OrderService.Application.Abstractions;
 
-public sealed class OrderSaga
+public class OrderSaga
 {
     private readonly IMessageBus _bus;
     private readonly IServiceScopeFactory _scopeFactory;
@@ -23,7 +23,7 @@ public sealed class OrderSaga
         _bus.Subscribe<PaymentFailedEvent>(HandlePaymentFailedAsync);
     }
 
-    public async Task StartOrderFlowAsync(Guid orderId, CancellationToken ct = default)
+    public virtual async Task StartOrderFlowAsync(Guid orderId, CancellationToken ct = default)
     {
         _logger.LogInformation("Starting order flow for Order {OrderId}", orderId);
 

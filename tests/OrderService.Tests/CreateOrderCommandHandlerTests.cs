@@ -14,11 +14,13 @@ using OrderService.Application.Orders.CreateOrder;
 using OrderService.Application.Sagas;
 using OrderService.Domain.Entities;
 using Xunit;
+using BuildingBlocks.Messaging;
+using Microsoft.Extensions.DependencyInjection;
 
 public class CreateOrderCommandHandlerTests
 {
     private readonly Mock<IOrderRepository> _mockRepo;
-    private readonly Mock<OrderSaga> _mockSaga;
+private readonly OrderSaga _saga;
     private readonly Mock<ILogger<CreateOrderCommandHandler>> _mockLogger;
     private readonly CreateOrderCommandHandler _handler;
     private readonly Faker _faker;
@@ -26,9 +28,13 @@ public class CreateOrderCommandHandlerTests
     public CreateOrderCommandHandlerTests()
     {
         _mockRepo = new Mock<IOrderRepository>();
-        _mockSaga = new Mock<OrderSaga>(MockBehavior.Loose, null, null, null);
         _mockLogger = new Mock<ILogger<CreateOrderCommandHandler>>();
-        _handler = new CreateOrderCommandHandler(_mockRepo.Object, _mockSaga.Object, _mockLogger.Object);
+        var mockBus = new Mock<IMessageBus>();
+var mockScopeFactory = new Mock<IServiceScopeFactory>();
+var mockSagaLogger = new Mock<ILogger<OrderSaga>>();
+
+_saga = new OrderSaga(mockBus.Object, mockScopeFactory.Object, mockSagaLogger.Object);
+_handler = new CreateOrderCommandHandler(_mockRepo.Object, _saga, _mockLogger.Object);
         _faker = new Faker();
     }
 
