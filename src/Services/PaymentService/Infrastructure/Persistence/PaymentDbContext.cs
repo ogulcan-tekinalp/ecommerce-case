@@ -1,13 +1,4 @@
-cd /Users/ogulcan/ecommerce-case/src/Services/PaymentService/Infrastructure
-dotnet add package Microsoft.EntityFrameworkCore
-dotnet add package Microsoft.EntityFrameworkCore.Relational
-# Eğer PostgreSQL kullanıyorsanız:
-dotnet add package Npgsql.EntityFrameworkCore.PostgreSQL
-# Eğer SQL Server kullanıyorsanız:
-# dotnet add package Microsoft.EntityFrameworkCore.SqlServer
-
-dotnet restore
-dotnet build
+using Microsoft.EntityFrameworkCore;
 using PaymentService.Application;
 
 namespace PaymentService.Infrastructure.Persistence;

@@ -16,6 +16,8 @@ public static class ServiceCollectionExtensions
 
         services.AddScoped<IProductRepository, ProductRepository>();
         services.AddScoped<IStockReservationRepository, StockReservationRepository>();
+        services.AddScoped<IFlashSaleRepository, FlashSaleRepository>();
+        services.AddScoped<ICustomerPurchaseRepository, CustomerPurchaseRepository>();
         
         return services;
     }

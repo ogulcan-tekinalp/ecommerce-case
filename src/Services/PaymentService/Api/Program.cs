@@ -3,6 +3,7 @@ using BuildingBlocks.Messaging;
 using PaymentService.Application;
 using PaymentService.Application.ProcessPayment;
 using PaymentService.Application.EventHandlers;
+using PaymentService.Infrastructure;
 using Serilog;
 
 Log.Logger = new LoggerConfiguration()
@@ -27,10 +28,12 @@ builder.Services.AddOpenApi();
 builder.Services.AddHealthChecks()
 .AddRabbitMQ(rabbitConnectionString: rabbitMqConnection);
 
-builder.Services.AddMediatR(cfg =>
-    cfg.RegisterServicesFromAssemblyContaining<ProcessPaymentCommand>());
+// Add Application Services
+builder.Services.AddPaymentServiceApplication();
 
-builder.Services.AddSingleton<PaymentProcessor>();
+// Add Infrastructure Services
+builder.Services.AddPaymentServiceInfrastructure(builder.Configuration);
+
 builder.Services.AddSingleton<StockReservedEventHandler>();
 
 var app = builder.Build();

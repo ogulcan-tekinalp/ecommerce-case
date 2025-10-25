@@ -6,6 +6,9 @@ using InventoryService.Application.Inventory.ReserveStock;
 using InventoryService.Application.Inventory.ReleaseStock;
 using InventoryService.Application.Inventory.CheckAvailability;
 using InventoryService.Application.Inventory.GetProductStock;
+using InventoryService.Application.Inventory.BulkUpdateStock;
+using InventoryService.Application.Inventory.ValidateFlashSale;
+using InventoryService.Api.Contracts;
 
 [ApiController]
 [Route("api/v1/inventory")]
@@ -46,7 +49,8 @@ public async Task<IActionResult> GetProductStock(Guid productId, CancellationTok
     {
         var command = new ReserveStockCommand(
             request.OrderId,
-            request.Items.Select(i => new ReserveStockItemDto(i.ProductId, i.Quantity)).ToList()
+            request.Items.Select(i => new ReserveStockItemDto(i.ProductId, i.Quantity)).ToList(),
+            request.CustomerId
         );
 
         var result = await _mediator.Send(command, ct);
@@ -73,5 +77,60 @@ public async Task<IActionResult> GetProductStock(Guid productId, CancellationTok
         }
 
         return Ok(new { message = "Stock released successfully" });
+    }
+
+    [HttpPost("bulk-update")]
+    public async Task<IActionResult> BulkUpdateStock(
+        [FromBody] BulkUpdateStockRequest request,
+        CancellationToken ct)
+    {
+        var command = new BulkUpdateStockCommand(
+            request.Items.Select(i => new BulkUpdateStockItemDto(
+                i.ProductId, 
+                i.QuantityChange, 
+                i.Reason, 
+                i.IsAddition
+            )).ToList()
+        );
+
+        var result = await _mediator.Send(command, ct);
+
+        if (!result.Success)
+        {
+            return BadRequest(new 
+            { 
+                error = "Bulk update failed",
+                errors = result.Errors,
+                updatedCount = result.UpdatedCount
+            });
+        }
+
+        return Ok(new 
+        { 
+            message = "Bulk stock update completed successfully",
+            updatedCount = result.UpdatedCount
+        });
+    }
+
+    [HttpPost("validate-flash-sale")]
+    public async Task<IActionResult> ValidateFlashSale(
+        [FromBody] ValidateFlashSaleRequest request,
+        CancellationToken ct)
+    {
+        var command = new ValidateFlashSaleCommand(
+            request.CustomerId,
+            request.ProductId,
+            request.RequestedQuantity
+        );
+
+        var result = await _mediator.Send(command, ct);
+
+        return Ok(new
+        {
+            isValid = result.IsValid,
+            isFlashSale = result.IsFlashSale,
+            maxAllowedQuantity = result.MaxAllowedQuantity,
+            failureReason = result.FailureReason
+        });
     }
 }

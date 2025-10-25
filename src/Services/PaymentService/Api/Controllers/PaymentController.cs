@@ -2,6 +2,7 @@ using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using PaymentService.Application;
 using PaymentService.Application.ProcessPayment;
+using PaymentService.Application.RefundPayment;
 
 namespace PaymentService.Api.Controllers;
 [ApiController]
@@ -61,19 +62,37 @@ public class PaymentController : ControllerBase
         });
     }
     [HttpPost("refund")]
-public async Task<IActionResult> RefundPayment(
-    [FromBody] RefundPaymentRequest request,
-    CancellationToken ct)
-{
-    return Ok(new
+    public async Task<IActionResult> RefundPayment(
+        [FromBody] RefundPaymentRequest request,
+        CancellationToken ct)
     {
-        refundId = Guid.NewGuid(),
-        paymentId = request.PaymentId,
-        amount = request.Amount,
-        status = "Refunded",
-        message = "Refund processed successfully"
-    });
-}
+        var command = new RefundPaymentCommand(
+            request.PaymentId,
+            request.Amount,
+            request.Reason ?? "Customer requested refund"
+        );
+
+        var result = await _mediator.Send(command, ct);
+
+        if (!result.Success)
+        {
+            return BadRequest(new
+            {
+                error = result.FailureReason,
+                paymentId = request.PaymentId
+            });
+        }
+
+        return Ok(new
+        {
+            refundId = result.RefundId,
+            paymentId = request.PaymentId,
+            amount = request.Amount,
+            transactionId = result.TransactionId,
+            status = "Refunded",
+            message = "Refund processed successfully"
+        });
+    }
 
 [HttpGet("{paymentId}")]
 public async Task<IActionResult> GetPaymentStatus(Guid paymentId)
@@ -97,4 +116,4 @@ public record ProcessPaymentRequest(
 );
 
 public record ValidatePaymentRequest(PaymentMethod Method);
-public record RefundPaymentRequest(Guid PaymentId, decimal Amount);
+public record RefundPaymentRequest(Guid PaymentId, decimal Amount, string? Reason = null);

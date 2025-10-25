@@ -4,7 +4,8 @@ using MediatR;
 
 public sealed record ReserveStockCommand(
     Guid OrderId,
-    List<ReserveStockItemDto> Items
+    List<ReserveStockItemDto> Items,
+    Guid? CustomerId = null
 ) : IRequest<ReserveStockResult>;
 
 public record ReserveStockItemDto(Guid ProductId, int Quantity);

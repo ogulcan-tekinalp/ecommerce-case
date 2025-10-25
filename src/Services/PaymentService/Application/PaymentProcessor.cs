@@ -1,15 +1,20 @@
 using Microsoft.Extensions.Logging;
+using PaymentService.Application.FraudDetection;
 
 namespace PaymentService.Application;
 
 public class PaymentProcessor
 {
     private readonly ILogger<PaymentProcessor> _logger;
+    private readonly IFraudDetectionService _fraudDetectionService;
     private readonly Random _random = new();
 
-    public PaymentProcessor(ILogger<PaymentProcessor> logger)
+    public PaymentProcessor(
+        ILogger<PaymentProcessor> logger,
+        IFraudDetectionService fraudDetectionService)
     {
         _logger = logger;
+        _fraudDetectionService = fraudDetectionService;
     }
 
     public async Task<PaymentResult> ProcessPaymentAsync(Payment payment, CancellationToken ct = default)
@@ -17,14 +22,17 @@ public class PaymentProcessor
         _logger.LogInformation("💳 Processing payment {PaymentId} for Order {OrderId}, Amount: {Amount}",
             payment.Id, payment.OrderId, payment.Amount);
 
-        if (IsFraudulent(payment))
+        // Enhanced fraud detection
+        var fraudResult = await _fraudDetectionService.AnalyzePaymentAsync(payment, ct);
+        if (fraudResult.IsFraudulent)
         {
-            _logger.LogWarning("🚨 Fraud detected for payment {PaymentId}", payment.Id);
+            _logger.LogWarning("🚨 Fraud detected for payment {PaymentId}: {Reason}", 
+                payment.Id, fraudResult.Reason);
             return new PaymentResult
             {
                 Success = false,
                 TransactionId = null,
-                FailureReason = "Fraud detection triggered",
+                FailureReason = fraudResult.Reason,
                 IsFraudulent = true
             };
         }
@@ -70,19 +78,12 @@ public class PaymentProcessor
         }
     }
 
+    // Legacy method - now handled by FraudDetectionService
     private bool IsFraudulent(Payment payment)
     {
-        if (payment.Amount > 100000)
-        {
-            return true;
-        }
-
-        if (payment.RetryCount > 3)
-        {
-            return true;
-        }
-
-        return false;
+        // This method is kept for backward compatibility
+        // New fraud detection logic is in FraudDetectionService
+        return payment.Amount > 100000 || payment.RetryCount > 3;
     }
 }
 

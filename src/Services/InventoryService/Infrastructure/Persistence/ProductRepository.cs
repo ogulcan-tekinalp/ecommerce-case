@@ -15,6 +15,9 @@ public sealed class ProductRepository : IProductRepository
     public Task<List<Product>> GetByIdsAsync(List<Guid> ids, CancellationToken ct = default)
         => _db.Products.Where(x => ids.Contains(x.Id)).ToListAsync(ct);
     
+    public Task<List<Product>> GetAllAsync(CancellationToken ct = default)
+        => _db.Products.ToListAsync(ct);
+    
     public Task AddAsync(Product product, CancellationToken ct = default)
         => _db.Products.AddAsync(product, ct).AsTask();
     

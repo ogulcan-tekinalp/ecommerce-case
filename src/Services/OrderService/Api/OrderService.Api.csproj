@@ -27,7 +27,7 @@
     <ProjectReference Include="..\Infrastructure\OrderService.Infrastructure.csproj" />
     <ProjectReference Include="..\Application\OrderService.Application.csproj" />
     <ProjectReference Include="..\Domain\OrderService.Domain.csproj" />
-      <ProjectReference Include="..\..\..\BuildingBlocks\Messaging\BuildingBlocks.Messaging.csproj" />
+    <ProjectReference Include="..\..\..\BuildingBlocks\Messaging\BuildingBlocks.Messaging.csproj" />
 
   </ItemGroup>
 
