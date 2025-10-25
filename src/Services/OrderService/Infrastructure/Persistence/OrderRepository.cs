@@ -31,4 +31,24 @@ public sealed class OrderRepository : IOrderRepository
     
     public Task SaveChangesAsync(CancellationToken ct = default)
         => _db.SaveChangesAsync(ct);
+
+    public Task UpdateAsync(Order order, CancellationToken ct = default)
+    {
+        _db.Orders.Update(order);
+        return Task.CompletedTask;
+    }
+
+    public Task<List<Order>> GetVipOrdersAsync(CancellationToken ct = default)
+        => _db.Orders
+            .Include(o => o.Items)
+            .Where(o => o.IsVip)
+            .OrderBy(o => o.CreatedAtUtc) // FIFO for VIP orders
+            .ToListAsync(ct);
+
+    public Task<List<Order>> GetPendingVipOrdersAsync(CancellationToken ct = default)
+        => _db.Orders
+            .Include(o => o.Items)
+            .Where(o => o.IsVip && o.Status == Domain.Enums.OrderStatus.Pending)
+            .OrderBy(o => o.CreatedAtUtc) // FIFO for VIP orders
+            .ToListAsync(ct);
 }

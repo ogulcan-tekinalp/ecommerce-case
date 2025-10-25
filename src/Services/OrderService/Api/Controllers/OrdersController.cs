@@ -9,6 +9,7 @@ using OrderService.Application.Orders.CreateOrder;
 using OrderService.Application.Orders.CancelOrder;
 using OrderService.Application.Orders.RetryOrder;
 using OrderService.Application.Orders.ShipOrder;
+using OrderService.Application.Vip;
 
 public record ShipOrderRequest(string TrackingNumber, string? Carrier = "DHL");
 
@@ -20,11 +21,13 @@ public class OrdersController : ControllerBase
 {
     private readonly ISender _mediator;
     private readonly IOrderRepository _repo;
+    private readonly VipOrderProcessingService _vipService;
 
-    public OrdersController(ISender mediator, IOrderRepository repo)
+    public OrdersController(ISender mediator, IOrderRepository repo, VipOrderProcessingService vipService)
     {
         _mediator = mediator;
         _repo = repo;
+        _vipService = vipService;
     }
 
 
@@ -166,4 +169,49 @@ public async Task<IActionResult> Retry([FromRoute] Guid orderId, CancellationTok
 
     return Ok(new { message = "Order retry initiated successfully" });
 }
+
+    [HttpGet("vip")]
+    public async Task<IActionResult> GetVipOrders(CancellationToken ct)
+    {
+        var vipOrders = await _vipService.GetVipOrdersAsync(ct);
+        
+        return Ok(new
+        {
+            totalVipOrders = vipOrders.Count,
+            orders = vipOrders.Select(o => new
+            {
+                o.Id,
+                o.CustomerId,
+                o.TotalAmount,
+                Status = o.Status.ToString(),
+                o.CreatedAtUtc,
+                o.ConfirmedAtUtc,
+                o.CancelledAtUtc,
+                o.IsVip,
+                ItemCount = o.Items.Count,
+                Items = o.Items.Select(i => new
+                {
+                    i.ProductId,
+                    i.ProductName,
+                    i.Quantity,
+                    i.UnitPrice,
+                    i.TotalPrice
+                })
+            })
+        });
+    }
+
+    [HttpPost("{orderId:guid}/mark-vip")]
+    public async Task<IActionResult> MarkAsVip([FromRoute] Guid orderId, CancellationToken ct)
+    {
+        await _vipService.MarkOrderAsVipAsync(orderId, ct);
+        return Ok(new { message = "Order marked as VIP successfully" });
+    }
+
+    [HttpGet("customer/{customerId:guid}/vip-status")]
+    public async Task<IActionResult> GetVipStatus([FromRoute] Guid customerId, CancellationToken ct)
+    {
+        var isVip = await _vipService.IsVipCustomerAsync(customerId, ct);
+        return Ok(new { customerId, isVip });
+    }
 }

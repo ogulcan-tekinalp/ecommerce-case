@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ecommerce-config
+  namespace: ecommerce
+data:
+  ASPNETCORE_ENVIRONMENT: "Production"
+  ConnectionStrings__Default: "Host=postgres-service;Port=5432;Database=ecommerce;Username=ecommerce;Password=ecommerce123"
+  ConnectionStrings__RabbitMQ: "amqp://ecommerce:ecommerce123@rabbitmq-service:5672"
+  ConnectionStrings__Redis: "redis-service:6379"
+  ConnectionStrings__Elasticsearch: "http://elasticsearch-service:9200"

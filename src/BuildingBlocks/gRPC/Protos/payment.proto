@@ -1,0 +1,79 @@
+syntax = "proto3";
+
+package payment;
+
+option csharp_namespace = "BuildingBlocks.gRPC.Protos";
+
+service PaymentService {
+  rpc ProcessPayment(ProcessPaymentRequest) returns (ProcessPaymentResponse);
+  rpc RefundPayment(RefundPaymentRequest) returns (RefundPaymentResponse);
+  rpc GetPayment(GetPaymentRequest) returns (GetPaymentResponse);
+  rpc ValidatePaymentMethod(ValidatePaymentMethodRequest) returns (ValidatePaymentMethodResponse);
+}
+
+message ProcessPaymentRequest {
+  string order_id = 1;
+  string customer_id = 2;
+  double amount = 3;
+  string method = 4;
+  string card_number = 5;
+  string expiry_date = 6;
+  string cvv = 7;
+}
+
+message ProcessPaymentResponse {
+  bool success = 1;
+  string message = 2;
+  string payment_id = 3;
+  string transaction_id = 4;
+  string status = 5;
+}
+
+message RefundPaymentRequest {
+  string payment_id = 1;
+  double amount = 2;
+  string reason = 3;
+}
+
+message RefundPaymentResponse {
+  bool success = 1;
+  string message = 2;
+  string refund_id = 3;
+  string transaction_id = 4;
+}
+
+message GetPaymentRequest {
+  string payment_id = 1;
+}
+
+message GetPaymentResponse {
+  bool success = 1;
+  string message = 2;
+  Payment payment = 3;
+}
+
+message ValidatePaymentMethodRequest {
+  string method = 1;
+  string card_number = 2;
+  string expiry_date = 3;
+  string cvv = 4;
+}
+
+message ValidatePaymentMethodResponse {
+  bool success = 1;
+  string message = 2;
+  bool is_valid = 3;
+}
+
+message Payment {
+  string id = 1;
+  string order_id = 2;
+  string customer_id = 3;
+  double amount = 4;
+  string status = 5;
+  string method = 6;
+  string transaction_id = 7;
+  string created_at_utc = 8;
+  string processed_at_utc = 9;
+  string failure_reason = 10;
+}

@@ -1,0 +1,70 @@
+syntax = "proto3";
+
+package order;
+
+option csharp_namespace = "BuildingBlocks.gRPC.Protos";
+
+service OrderService {
+  rpc GetOrder(GetOrderRequest) returns (GetOrderResponse);
+  rpc GetOrdersByCustomer(GetOrdersByCustomerRequest) returns (GetOrdersByCustomerResponse);
+  rpc CreateOrder(CreateOrderRequest) returns (CreateOrderResponse);
+  rpc CancelOrder(CancelOrderRequest) returns (CancelOrderResponse);
+}
+
+message GetOrderRequest {
+  string order_id = 1;
+}
+
+message GetOrderResponse {
+  bool success = 1;
+  string message = 2;
+  Order order = 3;
+}
+
+message GetOrdersByCustomerRequest {
+  string customer_id = 1;
+}
+
+message GetOrdersByCustomerResponse {
+  bool success = 1;
+  string message = 2;
+  repeated Order orders = 3;
+}
+
+message CreateOrderRequest {
+  string customer_id = 1;
+  repeated OrderItem items = 2;
+}
+
+message CreateOrderResponse {
+  bool success = 1;
+  string message = 2;
+  string order_id = 3;
+}
+
+message CancelOrderRequest {
+  string order_id = 1;
+}
+
+message CancelOrderResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message Order {
+  string id = 1;
+  string customer_id = 2;
+  double total_amount = 3;
+  string status = 4;
+  string created_at_utc = 5;
+  string updated_at_utc = 6;
+  repeated OrderItem items = 7;
+}
+
+message OrderItem {
+  string product_id = 1;
+  string product_name = 2;
+  int32 quantity = 3;
+  double unit_price = 4;
+  double total_price = 5;
+}

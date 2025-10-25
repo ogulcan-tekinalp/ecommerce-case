@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="HotChocolate.AspNetCore" Version="14.0.0" />
+    <PackageReference Include="HotChocolate.Data" Version="14.0.0" />
+    <PackageReference Include="HotChocolate.Data.EntityFramework" Version="14.0.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Http.Abstractions" Version="2.2.0" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="9.0.0" />
+  </ItemGroup>
+
+</Project>

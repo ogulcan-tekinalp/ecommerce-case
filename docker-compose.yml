@@ -1,30 +1,174 @@
 version: '3.8'
 
 services:
+  # Database
   postgres:
-    image: postgres:16
+    image: postgres:15
     container_name: ecommerce-postgres
     environment:
-      POSTGRES_USER: app
-      POSTGRES_PASSWORD: app
       POSTGRES_DB: ecommerce
+      POSTGRES_USER: ecommerce
+      POSTGRES_PASSWORD: ecommerce123
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ecommerce"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
+  # Message Broker
   rabbitmq:
     image: rabbitmq:3-management
     container_name: ecommerce-rabbitmq
     environment:
-      RABBITMQ_DEFAULT_USER: guest
-      RABBITMQ_DEFAULT_PASS: guest
+      RABBITMQ_DEFAULT_USER: ecommerce
+      RABBITMQ_DEFAULT_PASS: ecommerce123
     ports:
-      - "5672:5672"     # AMQP port
-      - "15672:15672"   # Management UI
+      - "5672:5672"
+      - "15672:15672"
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Cache
+  redis:
+    image: redis:7-alpine
+    container_name: ecommerce-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Log Aggregation
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+    container_name: ecommerce-elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # Monitoring
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: ecommerce-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--web.enable-lifecycle'
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: ecommerce-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin123
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards
+      - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources
+
+  # Application Services
+  order-service:
+    build:
+      context: .
+      dockerfile: src/Services/OrderService/Api/Dockerfile
+    container_name: ecommerce-order-service
+    ports:
+      - "5001:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__Default=Host=postgres;Port=5432;Database=ecommerce;Username=ecommerce;Password=ecommerce123
+      - ConnectionStrings__RabbitMQ=amqp://ecommerce:ecommerce123@rabbitmq:5672
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  inventory-service:
+    build:
+      context: .
+      dockerfile: src/Services/InventoryService/Api/Dockerfile
+    container_name: ecommerce-inventory-service
+    ports:
+      - "5002:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__Default=Host=postgres;Port=5432;Database=ecommerce;Username=ecommerce;Password=ecommerce123
+      - ConnectionStrings__RabbitMQ=amqp://ecommerce:ecommerce123@rabbitmq:5672
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  payment-service:
+    build:
+      context: .
+      dockerfile: src/Services/PaymentService/Api/Dockerfile
+    container_name: ecommerce-payment-service
+    ports:
+      - "5003:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__Default=Host=postgres;Port=5432;Database=ecommerce;Username=ecommerce;Password=ecommerce123
+      - ConnectionStrings__RabbitMQ=amqp://ecommerce:ecommerce123@rabbitmq:5672
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
 volumes:
   postgres_data:
   rabbitmq_data:
+  redis_data:
+  elasticsearch_data:
+  prometheus_data:
+  grafana_data:

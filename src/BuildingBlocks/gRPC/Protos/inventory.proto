@@ -1,0 +1,88 @@
+syntax = "proto3";
+
+package inventory;
+
+option csharp_namespace = "BuildingBlocks.gRPC.Protos";
+
+service InventoryService {
+  rpc GetProduct(GetProductRequest) returns (GetProductResponse);
+  rpc GetProducts(GetProductsRequest) returns (GetProductsResponse);
+  rpc ReserveStock(ReserveStockRequest) returns (ReserveStockResponse);
+  rpc ReleaseStock(ReleaseStockRequest) returns (ReleaseStockResponse);
+  rpc CheckAvailability(CheckAvailabilityRequest) returns (CheckAvailabilityResponse);
+}
+
+message GetProductRequest {
+  string product_id = 1;
+}
+
+message GetProductResponse {
+  bool success = 1;
+  string message = 2;
+  Product product = 3;
+}
+
+message GetProductsRequest {
+  repeated string product_ids = 1;
+}
+
+message GetProductsResponse {
+  bool success = 1;
+  string message = 2;
+  repeated Product products = 3;
+}
+
+message ReserveStockRequest {
+  string order_id = 1;
+  string customer_id = 2;
+  repeated StockItem items = 3;
+}
+
+message ReserveStockResponse {
+  bool success = 1;
+  string message = 2;
+  string reservation_id = 3;
+}
+
+message ReleaseStockRequest {
+  string reservation_id = 1;
+}
+
+message ReleaseStockResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message CheckAvailabilityRequest {
+  repeated string product_ids = 1;
+}
+
+message CheckAvailabilityResponse {
+  bool success = 1;
+  string message = 2;
+  repeated ProductAvailability availabilities = 3;
+}
+
+message Product {
+  string id = 1;
+  string name = 2;
+  string sku = 3;
+  string description = 4;
+  double price = 5;
+  int32 available_quantity = 6;
+  int32 reserved_quantity = 7;
+  bool is_flash_sale = 8;
+  string created_at_utc = 9;
+}
+
+message StockItem {
+  string product_id = 1;
+  int32 quantity = 2;
+}
+
+message ProductAvailability {
+  string product_id = 1;
+  bool available = 2;
+  int32 available_quantity = 3;
+  string message = 4;
+}
