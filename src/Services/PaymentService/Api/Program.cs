@@ -5,6 +5,7 @@ using PaymentService.Application.ProcessPayment;
 using PaymentService.Application.EventHandlers;
 using PaymentService.Infrastructure;
 using Serilog;
+using BuildingBlocks.Observability;
 
 Log.Logger = new LoggerConfiguration()
     .WriteTo.Console()
@@ -35,6 +36,7 @@ builder.Services.AddPaymentServiceApplication();
 builder.Services.AddPaymentServiceInfrastructure(builder.Configuration);
 
 builder.Services.AddSingleton<StockReservedEventHandler>();
+builder.Services.AddSingleton<OrderCancelledEventHandler>();
 
 var app = builder.Build();
 
@@ -45,13 +47,16 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.UseCorrelationId(); // Add correlation ID middleware
 app.MapHealthChecks("/health");
 
 app.MapControllers();
 
 var eventHandler = app.Services.GetRequiredService<StockReservedEventHandler>();
+var orderCancelledHandler = app.Services.GetRequiredService<OrderCancelledEventHandler>();
 
 app.Logger.LogInformation("✅ PaymentService started - Event handler initialized");
+app.Logger.LogInformation("✅ PaymentService started - OrderCancelledEventHandler initialized");
 
 app.Run();
 Log.CloseAndFlush();

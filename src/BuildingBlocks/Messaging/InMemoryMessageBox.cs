@@ -1,6 +1,7 @@
 namespace BuildingBlocks.Messaging;
 
 using BuildingBlocks.Messaging.Events;
+using BuildingBlocks.Observability;
 using System.Collections.Concurrent;
 
 public sealed class InMemoryMessageBus : IMessageBus
@@ -9,6 +10,19 @@ public sealed class InMemoryMessageBus : IMessageBus
 
     public Task PublishAsync<T>(T message, CancellationToken ct = default) where T : IntegrationEvent
     {
+        // Ensure correlation id is set from request context if not provided
+        if (string.IsNullOrEmpty(message.CorrelationId))
+        {
+            try
+            {
+                message = message with { CorrelationId = BuildingBlocks.Observability.CorrelationContext.Id };
+            }
+            catch
+            {
+                // ignore immutability issues if any
+            }
+        }
+
         var type = typeof(T);
         if (!_handlers.TryGetValue(type, out var handlers))
             return Task.CompletedTask;

@@ -1,3 +1,94 @@
+# E-Commerce Order Management
+
+This repo contains a small microservices e-commerce example built with .NET 9. It includes three services (Order, Inventory, Payment), uses RabbitMQ for event-based communication, and demonstrates a simple saga-style flow for cross-service operations.
+
+What this repo includes
+- OrderService — order lifecycle and saga orchestration
+- InventoryService — stock checks and reservations
+- PaymentService — payment processing and basic fraud handling
+- BuildingBlocks — shared libraries (Messaging, Observability, Persistence helpers)
+
+Quick start (development)
+
+Prerequisites
+- .NET 9 SDK
+- Docker & Docker Compose (optional: PostgreSQL, RabbitMQ, Redis)
+
+1) Clone and build
+
+```bash
+git clone <repo-url>
+cd ecommerce-case
+dotnet restore
+dotnet build
+```
+
+2) Start infrastructure (optional)
+
+```bash
+# start PostgreSQL, RabbitMQ, Redis (defined in docker-compose.yml)
+docker-compose up -d
+docker-compose ps
+```
+
+3) Run database migrations (if needed)
+
+```bash
+dotnet ef database update --project src/Services/OrderService/Api
+dotnet ef database update --project src/Services/InventoryService/Api
+dotnet ef database update --project src/Services/PaymentService/Api
+```
+
+4) Run services locally
+
+```bash
+# OrderService
+dotnet run --project src/Services/OrderService/Api --urls "http://localhost:5001"
+
+# InventoryService
+dotnet run --project src/Services/InventoryService/Api --urls "http://localhost:5002"
+
+# PaymentService
+dotnet run --project src/Services/PaymentService/Api --urls "http://localhost:5003"
+```
+
+Health checks
+
+```bash
+curl http://localhost:5001/health
+curl http://localhost:5002/health
+curl http://localhost:5003/health
+```
+
+Tests
+
+Run tests in the repository:
+
+```bash
+# run all tests
+dotnet test
+
+# run only integration tests
+dotnet test tests/IntegrationTests/IntegrationTests.csproj
+```
+
+Configuration (example)
+
+Set environment variables or appsettings.json values:
+
+```text
+ConnectionStrings__Default=Host=localhost;Port=5432;Database=ecommerce;Username=postgres;Password=postgres
+ConnectionStrings__RabbitMQ=amqp://guest:guest@localhost:5672
+ConnectionStrings__Redis=localhost:6379
+```
+
+Notes
+
+
+- This README is kept brief. Detailed API examples and curl snippets are available in each service folder (controllers and tests).
+- For production deployment, see the `k8s/` manifests.
+
+If you'd like, I can add a `scripts/quick-start.sh` or a Makefile that wraps the common commands.
 # 🛒 E-Commerce Order Management System
 
 A comprehensive microservices-based e-commerce platform built with .NET 9, implementing the Saga pattern for distributed transactions. The system demonstrates event-driven architecture with compensating transactions across Order, Inventory, and Payment services.

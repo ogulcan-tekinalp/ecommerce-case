@@ -7,6 +7,7 @@ using OrderService.Api.Middleware;
 using BuildingBlocks.Messaging;
 using OrderService.Application.Sagas;
 using Serilog;
+using BuildingBlocks.Observability;
 
 Log.Logger = new LoggerConfiguration()
     .WriteTo.Console()
@@ -55,6 +56,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.UseCorrelationId(); // Add correlation ID middleware
 app.UseMiddleware<ErrorHandlingMiddleware>(); 
 app.MapHealthChecks("/health");
 

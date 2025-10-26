@@ -25,5 +25,6 @@
     <ProjectReference Include="..\Application\InventoryService.Application.csproj" />
     <ProjectReference Include="..\Domain\InventoryService.Domain.csproj" />
     <ProjectReference Include="..\..\..\BuildingBlocks\Messaging\BuildingBlocks.Messaging.csproj" />
+    <ProjectReference Include="..\..\..\BuildingBlocks\Observability\BuildingBlocks.Observability.csproj" />
   </ItemGroup>
 </Project>

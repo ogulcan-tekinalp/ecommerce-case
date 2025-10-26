@@ -8,6 +8,7 @@ using InventoryService.Infrastructure.Persistence;
 using InventoryService.Domain.Entities;
 using InventoryService.Application.BackgroundJobs;
 using Serilog;
+using BuildingBlocks.Observability;
 
 Log.Logger = new LoggerConfiguration()
     .WriteTo.Console()
@@ -58,6 +59,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.UseCorrelationId(); // Add correlation ID middleware
 app.MapHealthChecks("/health");
 
 app.MapControllers();
