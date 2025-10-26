@@ -9,6 +9,7 @@ using OrderService.Application.Orders.CreateOrder;
 using OrderService.Application.Orders.CancelOrder;
 using OrderService.Application.Orders.RetryOrder;
 using OrderService.Application.Orders.ShipOrder;
+using OrderService.Application.Queue;
 using OrderService.Application.Vip;
 
 public record ShipOrderRequest(string TrackingNumber, string? Carrier = "DHL");
@@ -22,12 +23,14 @@ public class OrdersController : ControllerBase
     private readonly ISender _mediator;
     private readonly IOrderRepository _repo;
     private readonly VipOrderProcessingService _vipService;
+    private readonly OrderPriorityQueue _priorityQueue;
 
-    public OrdersController(ISender mediator, IOrderRepository repo, VipOrderProcessingService vipService)
+    public OrdersController(ISender mediator, IOrderRepository repo, VipOrderProcessingService vipService, OrderPriorityQueue priorityQueue)
     {
         _mediator = mediator;
         _repo = repo;
         _vipService = vipService;
+        _priorityQueue = priorityQueue;
     }
 
 
@@ -212,5 +215,18 @@ public async Task<IActionResult> Retry([FromRoute] Guid orderId, CancellationTok
     {
         var isVip = await _vipService.IsVipCustomerAsync(customerId, ct);
         return Ok(new { customerId, isVip });
+    }
+
+    [HttpGet("queue/status")]
+    public IActionResult GetQueueStatus()
+    {
+        var status = _priorityQueue.GetStatus();
+        return Ok(new
+        {
+            vipQueue = status.VipCount,
+            regularQueue = status.RegularCount,
+            totalQueue = status.TotalCount,
+            message = status.VipCount > 0 ? "VIP orders being prioritized" : "Processing regular orders"
+        });
     }
 }

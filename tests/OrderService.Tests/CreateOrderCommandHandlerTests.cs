@@ -11,7 +11,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using OrderService.Application.Abstractions;
 using OrderService.Application.Orders.CreateOrder;
-using OrderService.Application.Sagas;
+using OrderService.Application.Queue;
 using OrderService.Domain.Entities;
 using Xunit;
 using BuildingBlocks.Messaging;
@@ -20,7 +20,7 @@ using Microsoft.Extensions.DependencyInjection;
 public class CreateOrderCommandHandlerTests
 {
     private readonly Mock<IOrderRepository> _mockRepo;
-private readonly OrderSaga _saga;
+    private readonly OrderPriorityQueue _priorityQueue;
     private readonly Mock<ILogger<CreateOrderCommandHandler>> _mockLogger;
     private readonly CreateOrderCommandHandler _handler;
     private readonly Faker _faker;
@@ -29,12 +29,10 @@ private readonly OrderSaga _saga;
     {
         _mockRepo = new Mock<IOrderRepository>();
         _mockLogger = new Mock<ILogger<CreateOrderCommandHandler>>();
-        var mockBus = new Mock<IMessageBus>();
-var mockScopeFactory = new Mock<IServiceScopeFactory>();
-var mockSagaLogger = new Mock<ILogger<OrderSaga>>();
+        var mockQueueLogger = new Mock<ILogger<OrderPriorityQueue>>();
 
-_saga = new OrderSaga(mockBus.Object, mockScopeFactory.Object, mockSagaLogger.Object);
-_handler = new CreateOrderCommandHandler(_mockRepo.Object, _saga, _mockLogger.Object);
+        _priorityQueue = new OrderPriorityQueue(mockQueueLogger.Object);
+        _handler = new CreateOrderCommandHandler(_mockRepo.Object, _priorityQueue, _mockLogger.Object);
         _faker = new Faker();
     }
 

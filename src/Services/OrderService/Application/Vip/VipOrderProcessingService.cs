@@ -54,30 +54,35 @@ public class VipOrderProcessingService
     {
         _logger.LogInformation("🚀 Starting priority processing for VIP order {OrderId}", order.Id);
         
-        // VIP orders get immediate processing
-        // 1. Skip normal queue delays
-        // 2. Get priority in stock reservation
-        // 3. Get priority in payment processing
-        // 4. Get priority in order confirmation
+        // VIP orders get priority processing - trigger immediate saga flow
+        await TriggerVipOrderSagaAsync(order, cancellationToken);
         
-        _logger.LogInformation("✅ VIP order {OrderId} processed with priority", order.Id);
+        _logger.LogInformation("✅ VIP order {OrderId} triggered for priority processing", order.Id);
+    }
+
+    private async Task TriggerVipOrderSagaAsync(Order order, CancellationToken cancellationToken)
+    {
+        // This will be implemented to trigger priority saga flow
+        // For now, just log the VIP priority trigger
+        _logger.LogInformation("🎯 VIP order {OrderId} queued for priority saga processing", order.Id);
+        
+        // TODO: Implement actual VIP priority queue mechanism
+        // This should trigger the saga with VIP priority flags
+        await Task.CompletedTask;
     }
 
     public async Task<bool> IsVipCustomerAsync(Guid customerId, CancellationToken cancellationToken = default)
     {
-        
         var customerOrders = await _orderRepository.GetByCustomerIdAsync(customerId, cancellationToken);
         
-        // VIP criteria: More than 10 orders or total amount > 50,000
         var totalOrders = customerOrders.Count;
         var totalAmount = customerOrders.Sum(o => o.TotalAmount);
         
-        var isVip = totalOrders >= 10 || totalAmount >= 50000;
+        _logger.LogInformation("Customer {CustomerId} stats: Orders: {OrderCount}, Total: {TotalAmount}", 
+            customerId, totalOrders, totalAmount);
         
-        _logger.LogInformation("👤 Customer {CustomerId} VIP status: {IsVip} (Orders: {OrderCount}, Total: {TotalAmount})", 
-            customerId, isVip, totalOrders, totalAmount);
-        
-        return isVip;
+        // VIP status is manually set, not automatically determined
+        return false;
     }
 
     public async Task MarkOrderAsVipAsync(Guid orderId, CancellationToken cancellationToken = default)

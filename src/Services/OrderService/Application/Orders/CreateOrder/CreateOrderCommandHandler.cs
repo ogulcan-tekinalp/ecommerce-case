@@ -2,22 +2,22 @@ namespace OrderService.Application.Orders.CreateOrder;
 using MediatR;
 using Microsoft.Extensions.Logging;
 using OrderService.Application.Abstractions;
-using OrderService.Application.Sagas;
+using OrderService.Application.Queue;
 using OrderService.Domain.Entities;
 
 public sealed class CreateOrderCommandHandler : IRequestHandler<CreateOrderCommand, Guid>
 {
     private readonly IOrderRepository _repo;
-    private readonly OrderSaga _saga;
+    private readonly OrderPriorityQueue _priorityQueue;
     private readonly ILogger<CreateOrderCommandHandler> _logger;
     
     public CreateOrderCommandHandler(
         IOrderRepository repo,
-        OrderSaga saga,
+        OrderPriorityQueue priorityQueue,
         ILogger<CreateOrderCommandHandler> logger)
     {
         _repo = repo;
-        _saga = saga;
+        _priorityQueue = priorityQueue;
         _logger = logger;
     }
     
@@ -58,9 +58,18 @@ public sealed class CreateOrderCommandHandler : IRequestHandler<CreateOrderComma
         
         _logger.LogInformation("Order {OrderId} created for Customer {CustomerId}, Total: {Total}",
             order.Id, order.CustomerId, order.TotalAmount);
-        _logger.LogInformation("🚀 Starting saga for Order {OrderId}", order.Id);
         
-        _ = Task.Run(async () => await _saga.StartOrderFlowAsync(order.Id, ct), ct);
+        // Add order to priority queue based on VIP status
+        if (order.IsVip)
+        {
+            _priorityQueue.EnqueueVip(order.Id);
+            _logger.LogInformation("⭐ VIP Order {OrderId} added to priority queue", order.Id);
+        }
+        else
+        {
+            _priorityQueue.EnqueueRegular(order.Id);
+            _logger.LogInformation("📦 Regular Order {OrderId} added to queue", order.Id);
+        }
         
         return order.Id;
     }

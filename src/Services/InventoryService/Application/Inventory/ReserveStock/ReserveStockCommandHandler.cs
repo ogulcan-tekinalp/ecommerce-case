@@ -28,6 +28,11 @@ public sealed class ReserveStockCommandHandler : IRequestHandler<ReserveStockCom
 
     public async Task<ReserveStockResult> Handle(ReserveStockCommand req, CancellationToken ct)
     {
+        if (req.IsVip)
+        {
+            _logger.LogInformation("⭐ [INVENTORY] Processing VIP stock reservation for Order {OrderId}", req.OrderId);
+        }
+        
         var productIds = req.Items.Select(i => i.ProductId).ToList();
         var products = await _productRepo.GetByIdsAsync(productIds, ct);
 

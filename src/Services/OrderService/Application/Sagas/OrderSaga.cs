@@ -25,8 +25,6 @@ public class OrderSaga
 
     public virtual async Task StartOrderFlowAsync(Guid orderId, CancellationToken ct = default)
     {
-        _logger.LogInformation("Starting order flow for Order {OrderId}", orderId);
-
         using var scope = _scopeFactory.CreateScope();
         var repo = scope.ServiceProvider.GetRequiredService<IOrderRepository>();
 
@@ -37,12 +35,48 @@ public class OrderSaga
             return;
         }
 
+        if (order.IsVip)
+        {
+            _logger.LogInformation("⭐ Starting VIP priority order flow for Order {OrderId}", orderId);
+            await StartVipOrderFlowAsync(order, ct);
+        }
+        else
+        {
+            _logger.LogInformation("Starting regular order flow for Order {OrderId}", orderId);
+            await StartRegularOrderFlowAsync(order, ct);
+        }
+    }
+
+    private async Task StartVipOrderFlowAsync(Domain.Entities.Order order, CancellationToken ct)
+    {
         var orderCreatedEvent = new OrderCreatedEvent
         {
             OrderId = order.Id,
             CustomerId = order.CustomerId,
             TotalAmount = order.TotalAmount,
-            CorrelationId = orderId.ToString(),
+            CorrelationId = order.Id.ToString(),
+            IsVip = true, // VIP flag for priority processing
+            Items = order.Items.Select(i => new OrderItemDto(
+                i.ProductId,
+                i.Quantity,
+                i.UnitPrice
+            )).ToList()
+        };
+
+        // VIP orders get immediate processing without delays
+        await _bus.PublishAsync(orderCreatedEvent, ct);
+        _logger.LogInformation("⚡ Published VIP OrderCreatedEvent for Order {OrderId}", order.Id);
+    }
+
+    private async Task StartRegularOrderFlowAsync(Domain.Entities.Order order, CancellationToken ct)
+    {
+        var orderCreatedEvent = new OrderCreatedEvent
+        {
+            OrderId = order.Id,
+            CustomerId = order.CustomerId,
+            TotalAmount = order.TotalAmount,
+            CorrelationId = order.Id.ToString(),
+            IsVip = false,
             Items = order.Items.Select(i => new OrderItemDto(
                 i.ProductId,
                 i.Quantity,
@@ -51,7 +85,7 @@ public class OrderSaga
         };
 
         await _bus.PublishAsync(orderCreatedEvent, ct);
-        _logger.LogInformation("Published OrderCreatedEvent for Order {OrderId}", orderId);
+        _logger.LogInformation("Published regular OrderCreatedEvent for Order {OrderId}", order.Id);
     }
 
     private async Task HandleStockReservedAsync(StockReservedEvent evt)

@@ -17,6 +17,7 @@ This project implements a comprehensive e-commerce order management system using
 - **CQRS** with MediatR
 - **Event-Driven Architecture** with RabbitMQ/In-Memory Message Bus
 - **Saga Pattern** for distributed transactions
+- **VIP Priority Queue** for order prioritization
 - **Repository Pattern** with Unit of Work
 - **Optimistic Locking** for concurrency control
 - **Idempotency** for duplicate prevention
@@ -83,9 +84,12 @@ curl http://localhost:5003/health  # Payment Service
 POST   /api/v1/orders                      # Create order
 GET    /api/v1/orders/{orderId}           # Get order details
 PUT    /api/v1/orders/{orderId}/cancel    # Cancel order
+PUT    /api/v1/orders/{orderId}/ship      # Ship order
 GET    /api/v1/orders/customer/{customerId} # Customer orders
 POST   /api/v1/orders/{orderId}/retry     # Retry failed order
 GET    /api/v1/orders/vip                 # VIP orders
+POST   /api/v1/orders/{orderId}/mark-vip  # Mark as VIP
+GET    /api/v1/orders/queue/status        # Queue status
 ```
 
 ### Inventory Management
@@ -106,7 +110,7 @@ POST   /api/v1/payments/validate     # Validate payment method
 
 ## Testing Examples
 
-### Create Order
+### 1. Create Regular Order
 ```bash
 curl -X POST http://localhost:5001/api/v1/orders \
   -H "Content-Type: application/json" \
@@ -118,18 +122,110 @@ curl -X POST http://localhost:5001/api/v1/orders \
       "productName": "Laptop",
       "quantity": 1,
       "unitPrice": 15000
-    }]
+    }],
+    "idempotencyKey": "order-001"
   }'
 ```
 
-### Check Order Status
+### 2. Create VIP Order (Priority Processing)
+```bash
+curl -X POST http://localhost:5001/api/v1/orders \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customerId": "550e8400-e29b-41d4-a716-446655440001",
+    "isVip": true,
+    "items": [{
+      "productId": "550e8400-e29b-41d4-a716-446655440002",
+      "productName": "Mouse",
+      "quantity": 2,
+      "unitPrice": 150
+    }],
+    "idempotencyKey": "vip-order-001"
+  }'
+```
+
+### 3. Check Order Status
 ```bash
 curl http://localhost:5001/api/v1/orders/{orderId}
 ```
 
-### Check Stock
+### 4. Cancel Order
 ```bash
-curl http://localhost:5002/api/v1/inventory/products/{productId}/stock
+curl -X PUT http://localhost:5001/api/v1/orders/{orderId}/cancel \
+  -H "Content-Type: application/json" \
+  -d '{"reason": "Customer request"}'
+```
+
+### 5. Ship Order
+```bash
+curl -X PUT http://localhost:5001/api/v1/orders/{orderId}/ship \
+  -H "Content-Type: application/json" \
+  -d '{"trackingNumber": "TRK123456789", "carrier": "DHL"}'
+```
+
+### 6. Check Stock Availability
+```bash
+curl -X POST http://localhost:5002/api/v1/inventory/check-availability \
+  -H "Content-Type: application/json" \
+  -d '{
+    "items": [{
+      "productId": "550e8400-e29b-41d4-a716-446655440001",
+      "quantity": 5
+    }]
+  }'
+```
+
+### 7. Get Product Stock
+```bash
+curl http://localhost:5002/api/v1/inventory/products/550e8400-e29b-41d4-a716-446655440001/stock
+```
+
+### 8. Validate Payment Method
+```bash
+curl -X POST http://localhost:5003/api/v1/payments/validate \
+  -H "Content-Type: application/json" \
+  -d '{"method": 1}'
+```
+
+### 9. Mark Order as VIP
+```bash
+curl -X POST http://localhost:5001/api/v1/orders/{orderId}/mark-vip
+```
+
+### 10. Get VIP Orders
+```bash
+curl http://localhost:5001/api/v1/orders/vip
+```
+
+### 11. Test Edge Cases
+```bash
+# Invalid amount (below minimum)
+curl -X POST http://localhost:5001/api/v1/orders \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customerId": "550e8400-e29b-41d4-a716-446655440000",
+    "isVip": false,
+    "items": [{
+      "productId": "550e8400-e29b-41d4-a716-446655440002",
+      "productName": "Mouse",
+      "quantity": 1,
+      "unitPrice": 50
+    }]
+  }'
+
+# Invalid amount (above maximum)
+curl -X POST http://localhost:5001/api/v1/orders \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customerId": "550e8400-e29b-41d4-a716-446655440000",
+    "isVip": false,
+    "items": [{
+      "productId": "550e8400-e29b-41d4-a716-446655440001",
+      "productName": "Laptop",
+      "quantity": 10,
+      "unitPrice": 15000
+    }]
+  }'
 ```
 
 ## Business Rules
@@ -138,8 +234,9 @@ curl http://localhost:5002/api/v1/inventory/products/{productId}/stock
 - Min amount: 100 TL, Max amount: 50,000 TL
 - Max 20 items per order
 - 2-hour cancellation window
-- VIP customer priority processing
+- VIP priority queue system (no artificial delays)
 - Idempotency with duplicate prevention
+- Order lifecycle: Pending → Confirmed → Shipped → Delivered
 
 ### Inventory Rules
 - 10-minute automatic stock release
@@ -150,7 +247,8 @@ curl http://localhost:5002/api/v1/inventory/products/{productId}/stock
 
 ### Payment Rules
 - 3 retry attempts with exponential backoff
-- 85% success, 10% timeout, 5% failure simulation
+- Regular orders: 85% success, 10% timeout, 5% failure
+- VIP orders: 90% success, 8% timeout, 2% failure (better rates)
 - Fraud detection with rule-based system
 - Automatic refunds for cancelled orders
 
@@ -186,6 +284,7 @@ curl http://localhost:5002/api/v1/inventory/products/{productId}/stock
 ## Performance & Scalability
 
 ### Optimizations
+- **VIP Priority Queue** - Real queue-based prioritization
 - **Optimistic Locking** - Prevents race conditions
 - **Connection Pooling** - Database efficiency
 - **Async/Await** - Non-blocking operations
@@ -262,8 +361,9 @@ docker run -p 5001:8080 order-service
 ## System Status: PRODUCTION READY
 
 - **All Tests Passing**: 41 unit + 3 integration + performance tests
-- **Payment Simulation**: 85% success, 10% timeout, 5% failure
-- **Event-Driven Flow**: Order → Inventory → Payment → Confirmation
+- **VIP Priority Queue**: Real queue-based prioritization without delays
+- **Payment Simulation**: Regular 85% / VIP 90% success rates
+- **Event-Driven Flow**: Order → Queue → Inventory → Payment → Confirmation
 - **Edge Cases Covered**: Validation, limits, concurrency, failures
 - **Microservices**: 3 services with health checks
 - **Docker Ready**: Full containerization support
