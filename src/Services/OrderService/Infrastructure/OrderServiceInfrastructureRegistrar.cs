@@ -9,7 +9,6 @@ public static class OrderServiceInfrastructureRegistrar
         this IServiceCollection services,
         IConfiguration configuration)
     {
-        // TODO: EF Core DbContext ve diğer kayıtlar bir sonraki adımda gelecek.
         return services;
     }
 }

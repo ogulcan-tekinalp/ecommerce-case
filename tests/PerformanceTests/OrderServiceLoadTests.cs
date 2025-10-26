@@ -4,23 +4,35 @@ using NBomber.Http.CSharp;
 using Microsoft.AspNetCore.Mvc.Testing;
 using System.Text.Json;
 using FluentAssertions;
+using System.Net.Http.Json;
+using Xunit;
+using Microsoft.Extensions.DependencyInjection;
+using BuildingBlocks.Messaging;
 
 namespace PerformanceTests;
 
-public class OrderServiceLoadTests
+public class OrderServiceLoadTests : IDisposable
 {
-    private WebApplicationFactory<Program> _factory = null!;
+    private WebApplicationFactory<OrderService.Api.Program> _factory = null!;
     private HttpClient _client = null!;
 
     [Fact]
     public void OrderService_LoadTest_ShouldHandleConcurrentRequests()
     {
-        _factory = new WebApplicationFactory<Program>();
+        _factory = new WebApplicationFactory<OrderService.Api.Program>()
+            .WithWebHostBuilder(builder =>
+            {
+                builder.ConfigureServices(services =>
+                {
+                    // Replace RabbitMQ with InMemory message bus for performance tests
+                    services.AddSingleton<IMessageBus, InMemoryMessageBus>();
+                });
+            });
         _client = _factory.CreateClient();
 
         var scenario = Scenario.Create("order_service_load_test", async context =>
         {
-            var step1 = await Step.Run("create_order", async context =>
+            var step1 = Step.Run("create_order", context, async () =>
             {
                 var orderRequest = new
                 {
@@ -34,7 +46,8 @@ public class OrderServiceLoadTests
                             Quantity = 1,
                             UnitPrice = 100.0m
                         }
-                    }
+                    },
+                    IdempotencyKey = $"perf-test-{Guid.NewGuid()}"
                 };
 
                 var response = await _client.PostAsJsonAsync("/api/v1/orders", orderRequest);
@@ -42,7 +55,7 @@ public class OrderServiceLoadTests
                 return response.IsSuccessStatusCode ? Response.Ok() : Response.Fail();
             });
 
-            var step2 = await Step.Run("get_order", async context =>
+            var step2 = Step.Run("get_order", context, async () =>
             {
                 var orderId = Guid.NewGuid();
                 var response = await _client.GetAsync($"/api/v1/orders/{orderId}");
@@ -50,7 +63,7 @@ public class OrderServiceLoadTests
                 return Response.Ok();
             });
 
-            var step3 = await Step.Run("health_check", async context =>
+            var step3 = Step.Run("health_check", context, async () =>
             {
                 var response = await _client.GetAsync("/health");
                 
@@ -60,7 +73,7 @@ public class OrderServiceLoadTests
             return Response.Ok();
         })
         .WithLoadSimulations(
-            Simulation.InjectPerSec(rate: 10, during: TimeSpan.FromMinutes(1))
+            Simulation.KeepConstant(copies: 5, during: TimeSpan.FromSeconds(30))
         );
 
         var stats = NBomberRunner

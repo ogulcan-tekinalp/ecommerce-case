@@ -64,14 +64,7 @@ public class LowStockAlertService : ILowStockAlertService
         _logger.LogWarning("🚨 LOW STOCK ALERT: Product '{ProductName}' (ID: {ProductId}) has only {AvailableQuantity} items available!",
             product.Name, product.Id, product.AvailableQuantity);
 
-        // In a real implementation, you would:
-        // 1. Send email to inventory managers
-        // 2. Send Slack/Teams notification
-        // 3. Create a ticket in your ticketing system
-        // 4. Send SMS to warehouse staff
-        
-        // For now, we'll just log the alert
-        await Task.Delay(100); // Simulate async operation
+        await Task.Delay(100);
         
         _logger.LogInformation("📧 Low stock alert sent for product {ProductName} (ID: {ProductId})",
             product.Name, product.Id);

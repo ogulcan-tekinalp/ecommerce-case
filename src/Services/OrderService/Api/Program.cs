@@ -43,8 +43,7 @@ builder.Services.AddOrderServiceInfrastructure(builder.Configuration);
 // Application layer
 builder.Services.AddOrderServiceApplication();
 
-// ⚡ Register Order Saga and Simulator as Singleton
-builder.Services.AddSingleton<OrderSaga>();
+// ⚡ Saga and Simulator are registered in Application layer
 builder.Host.UseSerilog();
 
 var app = builder.Build();
@@ -62,11 +61,20 @@ app.MapHealthChecks("/health");
 
 app.MapControllers();
 
-// ⚡ Then initialize saga
+// ⚡ Then initialize saga and simulator
 var saga = app.Services.GetRequiredService<OrderSaga>();
+var simulator = app.Services.GetRequiredService<StockPaymentSimulator>();
+simulator.Initialize();
 
 app.Logger.LogInformation("✅ Order Saga initialized and subscribed to events");
+app.Logger.LogInformation("✅ StockPaymentSimulator initialized - Payment simulation active");
 
 app.Run();
 
 Log.CloseAndFlush();
+
+// Make Program class accessible for integration tests
+namespace OrderService.Api
+{
+    public partial class Program { }
+}

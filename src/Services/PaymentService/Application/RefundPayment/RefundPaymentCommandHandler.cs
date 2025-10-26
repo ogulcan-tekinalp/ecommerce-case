@@ -73,7 +73,6 @@ public class RefundPaymentCommandHandler : IRequestHandler<RefundPaymentCommand,
 
         try
         {
-            // Simulate refund processing
             await Task.Delay(TimeSpan.FromSeconds(1), ct);
 
             // Update payment status

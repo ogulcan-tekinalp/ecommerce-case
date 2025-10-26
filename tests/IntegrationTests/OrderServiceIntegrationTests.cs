@@ -4,6 +4,7 @@ using System.Text.Json;
 using FluentAssertions;
 using IntegrationTests.Base;
 using Bogus;
+using Xunit;
 
 namespace IntegrationTests;
 
@@ -27,9 +28,10 @@ public class OrderServiceIntegrationTests : IntegrationTestBase
                     ProductId = Guid.NewGuid(),
                     ProductName = _faker.Commerce.ProductName(),
                     Quantity = _faker.Random.Int(1, 5),
-                    UnitPrice = _faker.Random.Decimal(10, 100)
+                    UnitPrice = _faker.Random.Decimal(50, 200) // Minimum 100 TL için yeterli
                 }
-            }
+            },
+            IdempotencyKey = $"test-{Guid.NewGuid()}"
         };
 
         // Act

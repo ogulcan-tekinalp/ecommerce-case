@@ -5,6 +5,7 @@ using OrderService.Application.Common.Behaviors;
 using OrderService.Application.Orders.CreateOrder;
 using OrderService.Application.Vip;
 using OrderService.Application.BackgroundJobs;
+using OrderService.Application.Sagas;
 
 namespace OrderService.Application;
 
@@ -25,6 +26,10 @@ public static class DependencyInjection
         
         // VIP Order Processing Background Service
         services.AddHostedService<VipOrderProcessingBackgroundService>();
+        
+        // Saga and Simulator
+        services.AddSingleton<OrderSaga>();
+        services.AddSingleton<StockPaymentSimulator>();
 
         return services;
     }

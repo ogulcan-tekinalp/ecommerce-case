@@ -8,14 +8,17 @@ using Microsoft.EntityFrameworkCore;
 using OrderService.Infrastructure.Persistence;
 using InventoryService.Infrastructure.Persistence;
 using PaymentService.Infrastructure.Persistence;
+using BuildingBlocks.Messaging;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Xunit;
 
 namespace IntegrationTests.Base;
 
 public abstract class IntegrationTestBase : IAsyncLifetime
 {
-    protected WebApplicationFactory<Program> OrderServiceFactory { get; private set; } = null!;
-    protected WebApplicationFactory<Program> InventoryServiceFactory { get; private set; } = null!;
-    protected WebApplicationFactory<Program> PaymentServiceFactory { get; private set; } = null!;
+    protected WebApplicationFactory<OrderService.Api.Program> OrderServiceFactory { get; private set; } = null!;
+    protected WebApplicationFactory<InventoryService.Api.Program> InventoryServiceFactory { get; private set; } = null!;
+    protected WebApplicationFactory<PaymentService.Api.Program> PaymentServiceFactory { get; private set; } = null!;
     
     protected PostgreSqlContainer PostgreSqlContainer { get; private set; } = null!;
     protected RabbitMqContainer RabbitMqContainer { get; private set; } = null!;
@@ -68,9 +71,9 @@ public abstract class IntegrationTestBase : IAsyncLifetime
         );
     }
 
-    private WebApplicationFactory<Program> CreateOrderServiceFactory()
+    private WebApplicationFactory<OrderService.Api.Program> CreateOrderServiceFactory()
     {
-        return new WebApplicationFactory<Program>()
+        return new WebApplicationFactory<OrderService.Api.Program>()
             .WithWebHostBuilder(builder =>
             {
                 builder.ConfigureServices(services =>
@@ -83,18 +86,34 @@ public abstract class IntegrationTestBase : IAsyncLifetime
                     services.AddDbContext<OrderDbContext>(options =>
                         options.UseNpgsql(PostgreSqlContainer.GetConnectionString()));
 
-                    // Replace RabbitMQ connection
-                    services.Configure<RabbitMQOptions>(options =>
+                    // Replace RabbitMQ connection - remove existing and add new with test connection
+                    var messageBusDescriptor = services.FirstOrDefault(d => d.ServiceType == typeof(IMessageBus));
+                    if (messageBusDescriptor != null)
+                        services.Remove(messageBusDescriptor);
+                    
+                    services.AddRabbitMqMessageBus(RabbitMqContainer.GetConnectionString());
+                    
+                    // Replace health checks with test container connections
+                    services.Configure<HealthCheckServiceOptions>(options =>
                     {
-                        options.ConnectionString = RabbitMqContainer.GetConnectionString();
+                        options.Registrations.Clear();
                     });
+                    services.AddHealthChecks()
+                        .AddNpgSql(PostgreSqlContainer.GetConnectionString())
+                        .AddRabbitMQ(rabbitConnectionString: RabbitMqContainer.GetConnectionString());
+                    
+                    // Initialize database after service registration
+                    var serviceProvider = services.BuildServiceProvider();
+                    using var scope = serviceProvider.CreateScope();
+                    var dbContext = scope.ServiceProvider.GetRequiredService<OrderDbContext>();
+                    dbContext.Database.EnsureCreated();
                 });
             });
     }
 
-    private WebApplicationFactory<Program> CreateInventoryServiceFactory()
+    private WebApplicationFactory<InventoryService.Api.Program> CreateInventoryServiceFactory()
     {
-        return new WebApplicationFactory<Program>()
+        return new WebApplicationFactory<InventoryService.Api.Program>()
             .WithWebHostBuilder(builder =>
             {
                 builder.ConfigureServices(services =>
@@ -106,13 +125,35 @@ public abstract class IntegrationTestBase : IAsyncLifetime
 
                     services.AddDbContext<InventoryDbContext>(options =>
                         options.UseNpgsql(PostgreSqlContainer.GetConnectionString()));
+
+                    // Replace RabbitMQ connection - remove existing and add new with test connection
+                    var messageBusDescriptor = services.FirstOrDefault(d => d.ServiceType == typeof(IMessageBus));
+                    if (messageBusDescriptor != null)
+                        services.Remove(messageBusDescriptor);
+                    
+                    services.AddRabbitMqMessageBus(RabbitMqContainer.GetConnectionString());
+                    
+                    // Replace health checks with test container connections
+                    services.Configure<HealthCheckServiceOptions>(options =>
+                    {
+                        options.Registrations.Clear();
+                    });
+                    services.AddHealthChecks()
+                        .AddNpgSql(PostgreSqlContainer.GetConnectionString())
+                        .AddRabbitMQ(rabbitConnectionString: RabbitMqContainer.GetConnectionString());
+                    
+                    // Initialize database after service registration
+                    var serviceProvider = services.BuildServiceProvider();
+                    using var scope = serviceProvider.CreateScope();
+                    var dbContext = scope.ServiceProvider.GetRequiredService<InventoryDbContext>();
+                    dbContext.Database.EnsureCreated();
                 });
             });
     }
 
-    private WebApplicationFactory<Program> CreatePaymentServiceFactory()
+    private WebApplicationFactory<PaymentService.Api.Program> CreatePaymentServiceFactory()
     {
-        return new WebApplicationFactory<Program>()
+        return new WebApplicationFactory<PaymentService.Api.Program>()
             .WithWebHostBuilder(builder =>
             {
                 builder.ConfigureServices(services =>
@@ -124,6 +165,28 @@ public abstract class IntegrationTestBase : IAsyncLifetime
 
                     services.AddDbContext<PaymentDbContext>(options =>
                         options.UseNpgsql(PostgreSqlContainer.GetConnectionString()));
+
+                    // Replace RabbitMQ connection - remove existing and add new with test connection
+                    var messageBusDescriptor = services.FirstOrDefault(d => d.ServiceType == typeof(IMessageBus));
+                    if (messageBusDescriptor != null)
+                        services.Remove(messageBusDescriptor);
+                    
+                    services.AddRabbitMqMessageBus(RabbitMqContainer.GetConnectionString());
+                    
+                    // Replace health checks with test container connections
+                    services.Configure<HealthCheckServiceOptions>(options =>
+                    {
+                        options.Registrations.Clear();
+                    });
+                    services.AddHealthChecks()
+                        .AddNpgSql(PostgreSqlContainer.GetConnectionString())
+                        .AddRabbitMQ(rabbitConnectionString: RabbitMqContainer.GetConnectionString());
+                    
+                    // Initialize database after service registration
+                    var serviceProvider = services.BuildServiceProvider();
+                    using var scope = serviceProvider.CreateScope();
+                    var dbContext = scope.ServiceProvider.GetRequiredService<PaymentDbContext>();
+                    dbContext.Database.EnsureCreated();
                 });
             });
     }

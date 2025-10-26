@@ -3,20 +3,17 @@ using System;
 using InventoryService.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace InventoryService.Infrastructure.Migrations
+namespace InventoryService.Infrastructure.Infrastructure.Migrations
 {
     [DbContext(typeof(InventoryDbContext))]
-    [Migration("20251023172435_InitialInventorySchema")]
-    partial class InitialInventorySchema
+    partial class InventoryDbContextModelSnapshot : ModelSnapshot
     {
-        /// <inheritdoc />
-        protected override void BuildTargetModel(ModelBuilder modelBuilder)
+        protected override void BuildModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -24,6 +21,78 @@ namespace InventoryService.Infrastructure.Migrations
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
+
+            modelBuilder.Entity("InventoryService.Domain.Entities.CustomerPurchase", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CustomerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("FlashSaleProductId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("OrderId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ProductId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("PurchaseDateUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CustomerId");
+
+                    b.HasIndex("FlashSaleProductId");
+
+                    b.HasIndex("ProductId");
+
+                    b.HasIndex("CustomerId", "FlashSaleProductId");
+
+                    b.HasIndex("CustomerId", "ProductId");
+
+                    b.ToTable("customer_purchases", (string)null);
+                });
+
+            modelBuilder.Entity("InventoryService.Domain.Entities.FlashSaleProduct", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("EndTimeUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("MaxQuantityPerCustomer")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("ProductId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("StartTimeUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProductId");
+
+                    b.HasIndex("IsActive", "StartTimeUtc", "EndTimeUtc");
+
+                    b.ToTable("flash_sale_products", (string)null);
+                });
 
             modelBuilder.Entity("InventoryService.Domain.Entities.Product", b =>
                 {
@@ -106,6 +175,35 @@ namespace InventoryService.Infrastructure.Migrations
                     b.HasIndex("ExpiresAtUtc", "IsReleased");
 
                     b.ToTable("stock_reservations", (string)null);
+                });
+
+            modelBuilder.Entity("InventoryService.Domain.Entities.CustomerPurchase", b =>
+                {
+                    b.HasOne("InventoryService.Domain.Entities.FlashSaleProduct", "FlashSaleProduct")
+                        .WithMany()
+                        .HasForeignKey("FlashSaleProductId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("InventoryService.Domain.Entities.Product", "Product")
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("FlashSaleProduct");
+
+                    b.Navigation("Product");
+                });
+
+            modelBuilder.Entity("InventoryService.Domain.Entities.FlashSaleProduct", b =>
+                {
+                    b.HasOne("InventoryService.Domain.Entities.Product", "Product")
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Product");
                 });
 
             modelBuilder.Entity("InventoryService.Domain.Entities.StockReservation", b =>

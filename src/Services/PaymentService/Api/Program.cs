@@ -60,3 +60,9 @@ app.Logger.LogInformation("✅ PaymentService started - OrderCancelledEventHandl
 
 app.Run();
 Log.CloseAndFlush();
+
+// Make Program class accessible for integration tests
+namespace PaymentService.Api
+{
+    public partial class Program { }
+}

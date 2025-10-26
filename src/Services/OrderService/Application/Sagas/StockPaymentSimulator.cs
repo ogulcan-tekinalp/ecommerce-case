@@ -19,9 +19,13 @@ public sealed class StockPaymentSimulator
     {
         _bus = bus;
         _logger = logger;
-
+    }
+    
+    public void Initialize()
+    {
         // Subscribe to events and simulate responses
         _bus.Subscribe<OrderCreatedEvent>(SimulateStockReservationAsync);
+        _logger.LogInformation("📥 [SIMULATOR] Subscribed to OrderCreatedEvent");
     }
 
     private async Task SimulateStockReservationAsync(OrderCreatedEvent evt)

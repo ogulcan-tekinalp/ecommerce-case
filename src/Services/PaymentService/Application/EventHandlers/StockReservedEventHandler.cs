@@ -35,45 +35,64 @@ public sealed class StockReservedEventHandler
 
         _logger.LogInformation("💳 [PAYMENT] Processing payment for Order {OrderId}", evt.OrderId);
 
-        using var scope = _scopeFactory.CreateScope();
-        var mediator = scope.ServiceProvider.GetRequiredService<ISender>();
-
-        var command = new ProcessPaymentCommand(
-            OrderId: evt.OrderId,
-            CustomerId: Guid.Empty,
-            Amount: 15000m,
-            Method: PaymentMethod.CreditCard
-        );
-
-        var result = await mediator.Send(command);
-
-        if (result.Success)
+        // Payment simulation: 85% success, 10% timeout, 5% failure
+        await Task.Delay(1000); // Simulate processing time
+        
+        var random = new Random();
+        var outcome = random.Next(100);
+        
+        if (outcome < 85)
         {
+            // Success (85%)
+            var transactionId = Guid.NewGuid().ToString("N")[..16].ToUpper();
+            
             await _bus.PublishAsync(new PaymentProcessedEvent
             {
                 OrderId = evt.OrderId,
-                PaymentId = result.PaymentId!.Value,
+                PaymentId = Guid.NewGuid(),
                 Success = true,
-                TransactionId = result.TransactionId,
+                TransactionId = transactionId,
                 CorrelationId = evt.CorrelationId
             });
 
             _logger.LogInformation("✅ [PAYMENT] Payment successful for Order {OrderId}, Transaction: {TransactionId}",
-                evt.OrderId, result.TransactionId);
+                evt.OrderId, transactionId);
         }
-        else
+        else if (outcome < 95)
         {
+            // Timeout - retry after delay (10%)
+            _logger.LogWarning("⏳ [PAYMENT] Payment timeout for Order {OrderId}, retrying...", evt.OrderId);
+            await Task.Delay(2000);
+            
+            // Retry succeeds
+            var transactionId = Guid.NewGuid().ToString("N")[..16].ToUpper();
+            
             await _bus.PublishAsync(new PaymentProcessedEvent
             {
                 OrderId = evt.OrderId,
-                PaymentId = result.PaymentId ?? Guid.Empty,
+                PaymentId = Guid.NewGuid(),
+                Success = true,
+                TransactionId = transactionId,
+                CorrelationId = evt.CorrelationId
+            });
+            
+            _logger.LogInformation("✅ [PAYMENT] Payment successful after retry for Order {OrderId}, Transaction: {TransactionId}",
+                evt.OrderId, transactionId);
+        }
+        else
+        {
+            // Failure (5%)
+            await _bus.PublishAsync(new PaymentProcessedEvent
+            {
+                OrderId = evt.OrderId,
+                PaymentId = Guid.NewGuid(),
                 Success = false,
-                FailureReason = result.FailureReason,
+                FailureReason = "Insufficient funds",
                 CorrelationId = evt.CorrelationId
             });
 
-            _logger.LogWarning("❌ [PAYMENT] Payment failed for Order {OrderId}: {Reason}",
-                evt.OrderId, result.FailureReason);
+            _logger.LogWarning("❌ [PAYMENT] Payment failed for Order {OrderId}: Insufficient funds",
+                evt.OrderId);
         }
     }
 }

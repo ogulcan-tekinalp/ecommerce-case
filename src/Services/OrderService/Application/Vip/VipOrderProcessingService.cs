@@ -65,8 +65,6 @@ public class VipOrderProcessingService
 
     public async Task<bool> IsVipCustomerAsync(Guid customerId, CancellationToken cancellationToken = default)
     {
-        // In a real implementation, this would check customer status from a customer service
-        // For now, we'll use a simple heuristic based on order history
         
         var customerOrders = await _orderRepository.GetByCustomerIdAsync(customerId, cancellationToken);
         

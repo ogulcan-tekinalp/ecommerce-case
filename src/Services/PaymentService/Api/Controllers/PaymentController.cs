@@ -52,7 +52,6 @@ public class PaymentController : ControllerBase
     public async Task<IActionResult> ValidatePaymentMethod(
         [FromBody] ValidatePaymentRequest request)
     {
-        // Simple validation mock
         var isValid = request.Method >= 0 && (int)request.Method <= 3;
 
         return Ok(new

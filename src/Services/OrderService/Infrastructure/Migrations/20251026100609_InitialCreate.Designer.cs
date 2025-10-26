@@ -12,8 +12,8 @@ using OrderService.Infrastructure.Persistence;
 namespace OrderService.Infrastructure.Migrations
 {
     [DbContext(typeof(OrderDbContext))]
-    [Migration("20251024143647_FixIdempotencyKey")]
-    partial class FixIdempotencyKey
+    [Migration("20251026100609_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)

@@ -89,3 +89,9 @@ if (app.Environment.IsDevelopment())
 app.Run();
 
 Log.CloseAndFlush();
+
+// Make Program class accessible for integration tests
+namespace InventoryService.Api
+{
+    public partial class Program { }
+}

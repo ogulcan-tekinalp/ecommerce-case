@@ -32,7 +32,6 @@ public class OrdersController : ControllerBase
 
 
     [HttpPost]
-    [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateOrderRequest request, CancellationToken ct)
     {
         var items = request.Items.Select(i => new CreateOrderItemDto(
