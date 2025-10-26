@@ -3,7 +3,7 @@ version: '3.8'
 services:
   # Database
   postgres:
-    image: postgres:15
+    image: postgres:16
     container_name: ecommerce-postgres
     environment:
       POSTGRES_DB: ecommerce
